@@ -58,50 +58,18 @@ type (
 	}
 )
 
-func LoadFromFS(b *catalog.Builder, fsys fs.FS, glob string, unmarshal func([]byte, interface{}) error) error {
-	msgs, err := loadGlobFS(fsys, glob, unmarshal)
+func LoadFromFS(b *catalog.Builder, fsys fs.FS, file string, unmarshal func([]byte, interface{}) error) error {
+	data, err := fs.ReadFile(fsys, file)
 	if err != nil {
 		return err
 	}
 
-	for _, msg := range msgs {
-		if err := msg.set(b); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func loadGlobFS(fsys fs.FS, glob string, unmarshal func([]byte, interface{}) error) ([]*localeMessages, error) {
-	matchs, err := fs.Glob(fsys, glob)
-	if err != nil {
-		return nil, err
-	}
-
-	msgs := make([]*localeMessages, 0, len(matchs))
-
-	for _, file := range matchs {
-		msg, err := loadMessages(fsys, file, unmarshal)
-		if err != nil {
-			return nil, err
-		}
-		msgs = append(msgs, msg)
-	}
-
-	return msgs, nil
-}
-
-func loadMessages(fsys fs.FS, file string, unmarshal func([]byte, interface{}) error) (*localeMessages, error) {
-	data, err := fs.ReadFile(fsys, file)
-	if err != nil {
-		return nil, err
-	}
-
 	m := &localeMessages{}
 	if err := unmarshal(data, m); err != nil {
-		return nil, err
+		return err
 	}
-	return m, nil
+
+	return m.set(b)
 }
 
 func (m *localeMessages) set(b *catalog.Builder) (err error) {

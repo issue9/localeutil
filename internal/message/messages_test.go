@@ -19,7 +19,7 @@ func TestLoadFromFS_yaml(t *testing.T) {
 	a := assert.New(t)
 	b := catalog.NewBuilder()
 
-	a.NotError(LoadFromFS(b, os.DirFS("./testdata"), "*.yaml", yaml.Unmarshal))
+	a.NotError(LoadFromFS(b, os.DirFS("./testdata"), "cmn-hans.yaml", yaml.Unmarshal))
 	p := message.NewPrinter(language.MustParse("cmn-hans"), message.Catalog(b))
 
 	a.Equal(p.Sprintf("k1"), "msg1")
@@ -55,7 +55,7 @@ func TestLoadFromFS_json(t *testing.T) {
 	a := assert.New(t)
 	b := catalog.NewBuilder()
 
-	a.NotError(LoadFromFS(b, os.DirFS("./testdata"), "*.json", json.Unmarshal))
+	a.NotError(LoadFromFS(b, os.DirFS("./testdata"), "cmn-hans.json", json.Unmarshal))
 	p := message.NewPrinter(language.MustParse("cmn-hans"), message.Catalog(b))
 
 	a.Equal(p.Sprintf("k1"), "msg1")

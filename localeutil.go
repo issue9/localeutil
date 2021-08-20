@@ -24,13 +24,15 @@ func SystemLanguageTag() (language.Tag, error) {
 }
 
 // LoadMessageFromFS 从文件系统中加载文件并写入 b
-func LoadMessageFromFS(b *catalog.Builder, fsys fs.FS, glob string, unmarshal func([]byte, interface{}) error) error {
-	return message.LoadFromFS(b, fsys, glob, unmarshal)
+//
+// NOTE: unmarshal 必须要能解析 path 指向的文件
+func LoadMessageFromFS(b *catalog.Builder, fsys fs.FS, path string, unmarshal func([]byte, interface{}) error) error {
+	return message.LoadFromFS(b, fsys, path, unmarshal)
 }
 
 // LoadMessageFromFS 从文件中加载文件并写入 b
-func LoadMessageFromFile(b *catalog.Builder, glob string, unmarshal func([]byte, interface{}) error) error {
-	dir := filepath.ToSlash(filepath.Dir(glob))
-	glob = filepath.ToSlash(filepath.Base(glob))
-	return LoadMessageFromFS(b, os.DirFS(dir), glob, unmarshal)
+func LoadMessageFromFile(b *catalog.Builder, path string, unmarshal func([]byte, interface{}) error) error {
+	dir := filepath.ToSlash(filepath.Dir(path))
+	path = filepath.ToSlash(filepath.Base(path))
+	return LoadMessageFromFS(b, os.DirFS(dir), path, unmarshal)
 }
