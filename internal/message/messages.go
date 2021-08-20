@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 
+// Package message 从文件中加载本地化信息
 package message
 
 import (

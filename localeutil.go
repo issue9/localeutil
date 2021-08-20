@@ -11,8 +11,8 @@ import (
 	"golang.org/x/text/language"
 	"golang.org/x/text/message/catalog"
 
+	"github.com/issue9/localeutil/internal/message"
 	"github.com/issue9/localeutil/internal/syslocale"
-	"github.com/issue9/localeutil/message"
 )
 
 // SystemLanguageTag 返回当前系统的本地化信息
