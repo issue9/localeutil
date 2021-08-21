@@ -58,6 +58,7 @@ type (
 	}
 )
 
+// LoadFromFS 加载文件内容并写入 b
 func LoadFromFS(b *catalog.Builder, fsys fs.FS, file string, unmarshal func([]byte, interface{}) error) error {
 	data, err := fs.ReadFile(fsys, file)
 	if err != nil {

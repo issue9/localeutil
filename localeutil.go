@@ -25,12 +25,12 @@ func SystemLanguageTag() (language.Tag, error) {
 
 // LoadMessageFromFS 从文件系统中加载文件并写入 b
 //
-// NOTE: unmarshal 必须要能解析 path 指向的文件
+// unmarshal 用于解析从 path 加载的文件；
 func LoadMessageFromFS(b *catalog.Builder, fsys fs.FS, path string, unmarshal func([]byte, interface{}) error) error {
 	return message.LoadFromFS(b, fsys, path, unmarshal)
 }
 
-// LoadMessageFromFS 从文件中加载文件并写入 b
+// LoadMessageFromFile 从文件中加载文件并写入 b
 func LoadMessageFromFile(b *catalog.Builder, path string, unmarshal func([]byte, interface{}) error) error {
 	dir := filepath.ToSlash(filepath.Dir(path))
 	path = filepath.ToSlash(filepath.Base(path))
