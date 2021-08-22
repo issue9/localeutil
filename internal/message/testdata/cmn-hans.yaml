@@ -1,4 +1,7 @@
-language: cmn-hans
+languages:
+- cmn-hans
+- und
+
 messages:
 - key: k1
   message:

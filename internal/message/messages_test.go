@@ -31,6 +31,10 @@ func TestLoadFromFS_yaml(t *testing.T) {
 	a.Equal(p.Sprintf("k3", 1, 1), "1-一")
 	a.Equal(p.Sprintf("k3", 1, 2), "2-一")
 	a.Equal(p.Sprintf("k3", 2, 2), "2-二")
+
+	// yaml 中也定义了 und
+	p = message.NewPrinter(language.Albanian, message.Catalog(b))
+	a.Equal(p.Sprintf("k1"), "msg1")
 }
 
 func TestLoadFromFS_xml(t *testing.T) {
@@ -49,6 +53,10 @@ func TestLoadFromFS_xml(t *testing.T) {
 	a.Equal(p.Sprintf("k3", 1, 1), "1-一")
 	a.Equal(p.Sprintf("k3", 1, 2), "2-一")
 	a.Equal(p.Sprintf("k3", 2, 2), "2-二")
+
+	// 未定义 und，cmn-hans 无法找到匹配的数据
+	p = message.NewPrinter(language.MustParse("cmn-hans"), message.Catalog(b))
+	a.Equal(p.Sprintf("k1"), "k1")
 }
 
 func TestLoadFromFS_json(t *testing.T) {

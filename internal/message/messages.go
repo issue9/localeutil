@@ -19,9 +19,9 @@ import (
 
 type (
 	localeMessages struct {
-		XMLName  struct{}        `xml:"messages" json:"-" yaml:"-"`
-		Language language.Tag    `xml:"language,attr" json:"language" yaml:"language"`
-		Messages []localeMessage `xml:"message" json:"messages" yaml:"messages"`
+		XMLName   struct{}        `xml:"messages" json:"-" yaml:"-"`
+		Languages []language.Tag  `xml:"language" json:"languages" yaml:"languages"`
+		Messages  []localeMessage `xml:"message" json:"messages" yaml:"messages"`
 	}
 
 	// localeMessage 单条消息
@@ -74,27 +74,28 @@ func LoadFromFS(b *catalog.Builder, fsys fs.FS, file string, unmarshal func([]by
 }
 
 func (m *localeMessages) set(b *catalog.Builder) (err error) {
-	tag := m.Language
-	for _, msg := range m.Messages {
-		switch {
-		case msg.Message.Vars != nil:
-			vars := msg.Message.Vars
-			msgs := make([]catalog.Message, 0, len(vars))
-			for _, v := range vars {
-				mm := catalog.Var(v.Name, plural.Selectf(v.Arg, v.Format, v.Cases...))
-				msgs = append(msgs, mm)
+	for _, tag := range m.Languages {
+		for _, msg := range m.Messages {
+			switch {
+			case msg.Message.Vars != nil:
+				vars := msg.Message.Vars
+				msgs := make([]catalog.Message, 0, len(vars))
+				for _, v := range vars {
+					mm := catalog.Var(v.Name, plural.Selectf(v.Arg, v.Format, v.Cases...))
+					msgs = append(msgs, mm)
+				}
+				msgs = append(msgs, catalog.String(msg.Message.Msg))
+				err = b.Set(tag, msg.Key, msgs...)
+			case msg.Message.Select != nil:
+				s := msg.Message.Select
+				err = b.Set(tag, msg.Key, plural.Selectf(s.Arg, s.Format, s.Cases...))
+			case msg.Message.Msg != "":
+				err = b.SetString(tag, msg.Key, msg.Message.Msg)
 			}
-			msgs = append(msgs, catalog.String(msg.Message.Msg))
-			err = b.Set(tag, msg.Key, msgs...)
-		case msg.Message.Select != nil:
-			s := msg.Message.Select
-			err = b.Set(tag, msg.Key, plural.Selectf(s.Arg, s.Format, s.Cases...))
-		case msg.Message.Msg != "":
-			err = b.SetString(tag, msg.Key, msg.Message.Msg)
-		}
 
-		if err != nil {
-			return err
+			if err != nil {
+				return err
+			}
 		}
 	}
 
