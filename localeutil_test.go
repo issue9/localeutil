@@ -18,6 +18,6 @@ func TestLoadMessagesFromFile(t *testing.T) {
 	b := catalog.NewBuilder()
 	a.NotError(LoadMessageFromFile(b, "./internal/message/testdata/cmn-hans.json", json.Unmarshal))
 	p := message.NewPrinter(language.MustParse("cmn-hans"), message.Catalog(b))
-	phrase := &Phrase{Key: "k3", Values: []interface{}{3, 1}}
+	phrase := Phrase("k3", 3, 1)
 	a.Equal(phrase.LocaleString(p), "1-二")
 }

@@ -11,11 +11,11 @@ import (
 )
 
 var (
-	_ LocaleStringer = Phrase{}
-	_ LocaleStringer = &Phrase{}
+	_ LocaleStringer = phrase{}
+	_ LocaleStringer = &phrase{}
 )
 
-func TestPhrase_LocaleString(t *testing.T) {
+func TestLocaleStringer(t *testing.T) {
 	a := assert.New(t)
 
 	message.SetString(language.SimplifiedChinese, "k1", "cn")
@@ -23,10 +23,10 @@ func TestPhrase_LocaleString(t *testing.T) {
 	cnp := message.NewPrinter(language.SimplifiedChinese, message.Catalog(message.DefaultCatalog))
 	twp := message.NewPrinter(language.TraditionalChinese, message.Catalog(message.DefaultCatalog))
 
-	p := Phrase{Key: "k1"}
+	p := Phrase("k1")
 	a.Equal(p.LocaleString(cnp), "cn")
 	a.Equal(p.LocaleString(twp), "tw")
 
-	p = Phrase{Key: "not-exists"}
+	p = Phrase("not-exists")
 	a.Equal(p.LocaleString(twp), "not-exists")
 }
