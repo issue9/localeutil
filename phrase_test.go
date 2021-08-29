@@ -13,13 +13,16 @@ import (
 var (
 	_ LocaleStringer = phrase{}
 	_ LocaleStringer = &phrase{}
+
+	_ error          = &localeError{}
+	_ LocaleStringer = localeError{}
 )
 
 func TestLocaleStringer(t *testing.T) {
 	a := assert.New(t)
 
-	message.SetString(language.SimplifiedChinese, "k1", "cn")
-	message.SetString(language.TraditionalChinese, "k1", "tw")
+	a.NotError(message.SetString(language.SimplifiedChinese, "k1", "cn"))
+	a.NotError(message.SetString(language.TraditionalChinese, "k1", "tw"))
 	cnp := message.NewPrinter(language.SimplifiedChinese, message.Catalog(message.DefaultCatalog))
 	twp := message.NewPrinter(language.TraditionalChinese, message.Catalog(message.DefaultCatalog))
 
@@ -29,4 +32,25 @@ func TestLocaleStringer(t *testing.T) {
 
 	p = Phrase("not-exists")
 	a.Equal(p.LocaleString(twp), "not-exists")
+}
+
+func TestError(t *testing.T) {
+	a := assert.New(t)
+
+	a.NotError(message.SetString(language.SimplifiedChinese, "k1", "cn"))
+	a.NotError(message.SetString(language.TraditionalChinese, "k1", "tw"))
+	cnp := message.NewPrinter(language.SimplifiedChinese, message.Catalog(message.DefaultCatalog))
+	twp := message.NewPrinter(language.TraditionalChinese, message.Catalog(message.DefaultCatalog))
+
+	err := Error("k1")
+	le, ok := err.(LocaleStringer)
+	a.True(ok).NotNil(le)
+	a.Equal(le.LocaleString(cnp), "cn")
+	a.Equal(le.LocaleString(twp), "tw")
+	a.Equal(err.Error(), "k1")
+
+	err = Error("not-exists")
+	le, ok = err.(LocaleStringer)
+	a.True(ok).NotNil(le)
+	a.Equal(le.LocaleString(twp), "not-exists")
 }
