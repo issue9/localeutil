@@ -23,12 +23,18 @@ func TestLocaleStringer(t *testing.T) {
 
 	a.NotError(message.SetString(language.SimplifiedChinese, "k1", "cn"))
 	a.NotError(message.SetString(language.TraditionalChinese, "k1", "tw"))
+	a.NotError(message.SetString(language.SimplifiedChinese, "k2", "cn %[1]s"))
+	a.NotError(message.SetString(language.TraditionalChinese, "k2", "tw %[1]s"))
 	cnp := message.NewPrinter(language.SimplifiedChinese, message.Catalog(message.DefaultCatalog))
 	twp := message.NewPrinter(language.TraditionalChinese, message.Catalog(message.DefaultCatalog))
 
 	p := Phrase("k1")
 	a.Equal(p.LocaleString(cnp), "cn")
 	a.Equal(p.LocaleString(twp), "tw")
+
+	p = Phrase("k2", p)
+	a.Equal(p.LocaleString(cnp), "cn cn")
+	a.Equal(p.LocaleString(twp), "tw tw")
 
 	p = Phrase("not-exists")
 	a.Equal(p.LocaleString(twp), "not-exists")

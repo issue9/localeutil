@@ -15,13 +15,11 @@ import (
 	"github.com/issue9/localeutil/internal/syslocale"
 )
 
-// SystemLanguageTag 返回当前系统的本地化信息
+// DetectUserLanguageTag 检测当前用户的本地化信息
 //
 // *nix 系统会使用 LANG 环境变量中的值，windows 在 LANG
 // 环境变量不存在的情况下，调用 GetUserDefaultLocaleName 函数获取。
-func SystemLanguageTag() (language.Tag, error) {
-	return syslocale.Get()
-}
+func DetectUserLanguageTag() (language.Tag, error) { return syslocale.Get() }
 
 // LoadMessageFromFS 从文件系统中加载文件并写入 b
 //

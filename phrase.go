@@ -9,10 +9,10 @@ import (
 )
 
 type (
-	// LocaleStringer 本地化的字符串
+	// LocaleStringer 本地化字符串的接口中
 	LocaleStringer interface {
 		// LocaleString 返回当前对象的本地化字符串
-		LocaleString(*message.Printer) string
+		LocaleString(p *message.Printer) string
 	}
 
 	phrase struct {
@@ -24,6 +24,9 @@ type (
 )
 
 // Phrase 返回一段未翻译的语言片段
+//
+// key 和 val 参数与 golang.org/x/text/message.Printer.Sprintf 的参数相同。
+// 如果 val 也实现了 LocaleStringer 接口，则会先调用 val 的 LocaleString 方法再传递给 Sprintf。
 func Phrase(key message.Reference, val ...interface{}) LocaleStringer {
 	return phrase{key: key, values: val}
 }
@@ -36,7 +39,15 @@ func Error(key message.Reference, val ...interface{}) error {
 }
 
 func (p phrase) LocaleString(printer *message.Printer) string {
-	return printer.Sprintf(p.key, p.values...)
+	values := make([]interface{}, 0, len(p.values))
+	for _, value := range p.values {
+		if ls, ok := value.(LocaleStringer); ok {
+			value = ls.LocaleString(printer)
+		}
+		values = append(values, value)
+	}
+
+	return printer.Sprintf(p.key, values...)
 }
 
 func (err localeError) Error() string { return fmt.Sprint(err.key) }

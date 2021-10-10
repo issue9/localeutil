@@ -7,8 +7,10 @@ import (
 	"unsafe"
 )
 
-// GetUserDefaultLocaleName 第二个参数
-const maxlen = 85
+const (
+	getLocaleFuncName = "GetUserDefaultLocaleName"
+	maxLen            = 85 // GetUserDefaultLocaleName 第二个参数
+)
 
 func getLocaleName() (string, error) {
 	if name := getEnvLang(); len(name) > 0 {
@@ -21,13 +23,13 @@ func getLocaleName() (string, error) {
 	}
 	defer k32.Release()
 
-	f, err := k32.FindProc("GetUserDefaultLocaleName")
+	f, err := k32.FindProc(getLocaleFuncName)
 	if err != nil {
 		return "", err
 	}
 
-	buf := make([]uint16, maxlen)
-	r1, _, err := f.Call(uintptr(unsafe.Pointer(&buf[0])), uintptr(maxlen))
+	buf := make([]uint16, maxLen)
+	r1, _, err := f.Call(uintptr(unsafe.Pointer(&buf[0])), uintptr(maxLen))
 	if uint32(r1) == 0 {
 		return "", err
 	}
