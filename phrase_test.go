@@ -31,10 +31,12 @@ func TestLocaleStringer(t *testing.T) {
 	p := Phrase("k1")
 	a.Equal(p.LocaleString(cnp), "cn")
 	a.Equal(p.LocaleString(twp), "tw")
+	a.Equal(p.(phrase).String(), "k1")
 
 	p = Phrase("k2", p)
 	a.Equal(p.LocaleString(cnp), "cn cn")
 	a.Equal(p.LocaleString(twp), "tw tw")
+	a.Equal(p.(phrase).String(), "k2")
 
 	p = Phrase("not-exists")
 	a.Equal(p.LocaleString(twp), "not-exists")

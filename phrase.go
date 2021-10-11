@@ -3,9 +3,9 @@
 package localeutil
 
 import (
-	"fmt"
-
+	"golang.org/x/text/language"
 	"golang.org/x/text/message"
+	"golang.org/x/text/message/catalog"
 )
 
 type (
@@ -23,6 +23,11 @@ type (
 	localeError phrase
 )
 
+var emptyPrinter = message.NewPrinter(language.Und, message.Catalog(catalog.NewBuilder()))
+
+// EmptyPrinter 返回空的 Printer 实例
+func EmptyPrinter() *message.Printer { return emptyPrinter }
+
 // Phrase 返回一段未翻译的语言片段
 //
 // key 和 val 参数与 golang.org/x/text/message.Printer.Sprintf 的参数相同。
@@ -38,6 +43,8 @@ func Error(key message.Reference, val ...interface{}) error {
 	return localeError{key: key, values: val}
 }
 
+func (p phrase) String() string { return p.LocaleString(EmptyPrinter()) }
+
 func (p phrase) LocaleString(printer *message.Printer) string {
 	values := make([]interface{}, 0, len(p.values))
 	for _, value := range p.values {
@@ -50,7 +57,7 @@ func (p phrase) LocaleString(printer *message.Printer) string {
 	return printer.Sprintf(p.key, values...)
 }
 
-func (err localeError) Error() string { return fmt.Sprint(err.key) }
+func (err localeError) Error() string { return phrase(err).String() }
 
 func (err localeError) LocaleString(p *message.Printer) string {
 	return phrase(err).LocaleString(p)
