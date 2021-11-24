@@ -8,7 +8,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/issue9/assert"
+	"github.com/issue9/assert/v2"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
 	"golang.org/x/text/message/catalog"
@@ -16,7 +16,7 @@ import (
 )
 
 func TestLoadFromFS_yaml(t *testing.T) {
-	a := assert.New(t)
+	a := assert.New(t, false)
 	b := catalog.NewBuilder()
 
 	a.NotError(LoadFromFS(b, os.DirFS("./testdata"), "cmn-hans.yaml", yaml.Unmarshal))
@@ -38,7 +38,7 @@ func TestLoadFromFS_yaml(t *testing.T) {
 }
 
 func TestLoadFromFS_xml(t *testing.T) {
-	a := assert.New(t)
+	a := assert.New(t, false)
 	b := catalog.NewBuilder()
 
 	a.NotError(LoadFromFS(b, os.DirFS("./testdata"), "cmn-hant.xml", xml.Unmarshal))
@@ -60,7 +60,7 @@ func TestLoadFromFS_xml(t *testing.T) {
 }
 
 func TestLoadFromFS_json(t *testing.T) {
-	a := assert.New(t)
+	a := assert.New(t, false)
 	b := catalog.NewBuilder()
 
 	a.NotError(LoadFromFS(b, os.DirFS("./testdata"), "cmn-hans.json", json.Unmarshal))

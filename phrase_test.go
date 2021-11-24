@@ -5,7 +5,7 @@ package localeutil
 import (
 	"testing"
 
-	"github.com/issue9/assert"
+	"github.com/issue9/assert/v2"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
 )
@@ -19,7 +19,7 @@ var (
 )
 
 func TestLocaleStringer(t *testing.T) {
-	a := assert.New(t)
+	a := assert.New(t, false)
 
 	a.NotError(message.SetString(language.SimplifiedChinese, "k1", "cn"))
 	a.NotError(message.SetString(language.TraditionalChinese, "k1", "tw"))
@@ -43,7 +43,7 @@ func TestLocaleStringer(t *testing.T) {
 }
 
 func TestError(t *testing.T) {
-	a := assert.New(t)
+	a := assert.New(t, false)
 
 	a.NotError(message.SetString(language.SimplifiedChinese, "k1", "cn"))
 	a.NotError(message.SetString(language.TraditionalChinese, "k1", "tw"))

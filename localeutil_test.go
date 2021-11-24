@@ -6,14 +6,14 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/issue9/assert"
+	"github.com/issue9/assert/v2"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
 	"golang.org/x/text/message/catalog"
 )
 
 func TestLoadMessagesFromFile(t *testing.T) {
-	a := assert.New(t)
+	a := assert.New(t, false)
 
 	b := catalog.NewBuilder()
 	a.NotError(LoadMessageFromFile(b, "./internal/message/testdata/cmn-hans.json", json.Unmarshal))

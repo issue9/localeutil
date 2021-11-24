@@ -5,12 +5,12 @@ package syslocale
 import (
 	"testing"
 
-	"github.com/issue9/assert"
+	"github.com/issue9/assert/v2"
 	"golang.org/x/text/language"
 )
 
 func TestGet(t *testing.T) {
-	a := assert.New(t)
+	a := assert.New(t, false)
 
 	lang, err := Get()
 	if err != nil {
@@ -21,7 +21,7 @@ func TestGet(t *testing.T) {
 }
 
 func TestGetLocaleName(t *testing.T) {
-	a := assert.New(t)
+	a := assert.New(t, false)
 
 	name, err := getLocaleName()
 	a.NotError(err).True(len(name) > 0)
