@@ -3,6 +3,7 @@
 package localeutil
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/issue9/assert/v2"
@@ -61,4 +62,7 @@ func TestError(t *testing.T) {
 	le, ok = err.(LocaleStringer)
 	a.True(ok).NotNil(le)
 	a.Equal(le.LocaleString(twp), "not-exists")
+
+	a.True(errors.Is(Error("k1"), Error("k1")))
+	a.False(errors.Is(Error("k1"), errors.New("k1")))
 }

@@ -62,3 +62,11 @@ func (err localeError) Error() string { return phrase(err).String() }
 func (err localeError) LocaleString(p *message.Printer) string {
 	return phrase(err).LocaleString(p)
 }
+
+func (err localeError) Is(target error) bool {
+	t, ok := target.(localeError)
+	if !ok {
+		return false
+	}
+	return err.key == t.key
+}
