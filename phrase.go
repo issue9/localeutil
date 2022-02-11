@@ -64,6 +64,7 @@ func (err localeError) LocaleString(p *message.Printer) string {
 }
 
 func (err localeError) Is(target error) bool {
+	// NOTE: localeError 并不是指针，所以需要自定义实现 Is 是必须的。
 	t, ok := target.(localeError)
 	if !ok {
 		return false

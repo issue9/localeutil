@@ -5,8 +5,6 @@ package localeutil
 
 import (
 	"io/fs"
-	"os"
-	"path/filepath"
 
 	"golang.org/x/text/language"
 	"golang.org/x/text/message/catalog"
@@ -14,6 +12,8 @@ import (
 	"github.com/issue9/localeutil/internal/message"
 	"github.com/issue9/localeutil/internal/syslocale"
 )
+
+type UnmarshalFunc = func([]byte, interface{}) error
 
 // DetectUserLanguageTag 检测当前用户的本地化信息
 //
@@ -24,13 +24,11 @@ func DetectUserLanguageTag() (language.Tag, error) { return syslocale.Get() }
 // LoadMessageFromFS 从文件系统中加载文件并写入 b
 //
 // unmarshal 用于解析从 path 加载的文件；
-func LoadMessageFromFS(b *catalog.Builder, fsys fs.FS, path string, unmarshal func([]byte, interface{}) error) error {
+func LoadMessageFromFS(b *catalog.Builder, fsys fs.FS, path string, unmarshal UnmarshalFunc) error {
 	return message.LoadFromFS(b, fsys, path, unmarshal)
 }
 
-// LoadMessageFromFile 从文件中加载文件并写入 b
-func LoadMessageFromFile(b *catalog.Builder, path string, unmarshal func([]byte, interface{}) error) error {
-	dir := filepath.ToSlash(filepath.Dir(path))
-	path = filepath.ToSlash(filepath.Base(path))
-	return LoadMessageFromFS(b, os.DirFS(dir), path, unmarshal)
+// LoadMessageFromFSGlob 从文件系统中加载多个文件并写入 b
+func LoadMessageFromFSGlob(b *catalog.Builder, fsys fs.FS, glob string, unmarshal UnmarshalFunc) error {
+	return message.LoadFromFSGlob(b, fsys, glob, unmarshal)
 }

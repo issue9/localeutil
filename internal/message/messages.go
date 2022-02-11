@@ -73,6 +73,21 @@ func LoadFromFS(b *catalog.Builder, fsys fs.FS, file string, unmarshal func([]by
 	return m.set(b)
 }
 
+// LoadFromFSGlob 加载多个文件内容并写入 b
+func LoadFromFSGlob(b *catalog.Builder, fsys fs.FS, glob string, unmarshal func([]byte, interface{}) error) error {
+	matches, err := fs.Glob(fsys, glob)
+	if err != nil {
+		return err
+	}
+
+	for _, match := range matches {
+		if err := LoadFromFS(b, fsys, match, unmarshal); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (m *localeMessages) set(b *catalog.Builder) (err error) {
 	for _, tag := range m.Languages {
 		for _, msg := range m.Messages {
