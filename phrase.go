@@ -2,11 +2,7 @@
 
 package localeutil
 
-import (
-	"golang.org/x/text/language"
-	"golang.org/x/text/message"
-	"golang.org/x/text/message/catalog"
-)
+import "golang.org/x/text/message"
 
 type (
 	// LocaleStringer 本地化字符串的接口中
@@ -20,13 +16,11 @@ type (
 		values []interface{}
 	}
 
-	localeError phrase
+	localeError struct {
+		LocaleStringer
+		p *message.Printer
+	}
 )
-
-var emptyPrinter = message.NewPrinter(language.Und, message.Catalog(catalog.NewBuilder()))
-
-// EmptyPrinter 返回空的 Printer 实例
-func EmptyPrinter() *message.Printer { return emptyPrinter }
 
 // Phrase 返回一段未翻译的语言片段
 //
@@ -36,14 +30,17 @@ func Phrase(key message.Reference, val ...interface{}) LocaleStringer {
 	return phrase{key: key, values: val}
 }
 
-// Error 返回未翻译的错误对象
+// Error 构建错误对象
 //
-// 该对象同时实现了 LocaleStringer 接口。
-func Error(key message.Reference, val ...interface{}) error {
-	return localeError{key: key, values: val}
+// 返回对象同时实现了 LocaleStringer 接口，用于对内容进行翻译。
+//
+// p 用于指定默认的语言对象，当用户直接调用 error.Error 方法时采用此对象；
+func Error(p *message.Printer, key message.Reference, val ...interface{}) error {
+	if p == nil {
+		panic("p 不能为空")
+	}
+	return &localeError{p: p, LocaleStringer: Phrase(key, val...)}
 }
-
-func (p phrase) String() string { return p.LocaleString(EmptyPrinter()) }
 
 func (p phrase) LocaleString(printer *message.Printer) string {
 	values := make([]interface{}, 0, len(p.values))
@@ -57,17 +54,8 @@ func (p phrase) LocaleString(printer *message.Printer) string {
 	return printer.Sprintf(p.key, values...)
 }
 
-func (err localeError) Error() string { return phrase(err).String() }
+func (err *localeError) Error() string { return err.LocaleString(err.p) }
 
-func (err localeError) LocaleString(p *message.Printer) string {
-	return phrase(err).LocaleString(p)
-}
-
-func (err localeError) Is(target error) bool {
-	// NOTE: localeError 并不是指针，所以需要自定义实现 Is 是必须的。
-	t, ok := target.(localeError)
-	if !ok {
-		return false
-	}
-	return err.key == t.key
+func (err *localeError) LocaleString(p *message.Printer) string {
+	return err.LocaleStringer.LocaleString(p)
 }
