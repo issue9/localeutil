@@ -4,6 +4,7 @@ package localeutil
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/issue9/assert/v2"
@@ -44,28 +45,26 @@ func TestLocaleStringer(t *testing.T) {
 func TestError(t *testing.T) {
 	a := assert.New(t, false)
 
-	a.Panic(func() {
-		Error(nil, "format")
-	})
-
 	a.NotError(message.SetString(language.SimplifiedChinese, "k1", "cn"))
 	a.NotError(message.SetString(language.TraditionalChinese, "k1", "tw"))
 	cnp := message.NewPrinter(language.SimplifiedChinese, message.Catalog(message.DefaultCatalog))
 	twp := message.NewPrinter(language.TraditionalChinese, message.Catalog(message.DefaultCatalog))
-	p := message.NewPrinter(language.SimplifiedChinese)
 
-	err := Error(p, "k1")
+	err := Error("k1")
 	le, ok := err.(LocaleStringer)
 	a.True(ok).NotNil(le)
 	a.Equal(le.LocaleString(cnp), "cn")
 	a.Equal(le.LocaleString(twp), "tw")
-	a.Equal(err.Error(), "cn")
+	a.Equal(err.Error(), "k1")
 
-	err = Error(p, "not-exists")
+	err = Error("not-exists")
 	le, ok = err.(LocaleStringer)
 	a.True(ok).NotNil(le)
 	a.Equal(le.LocaleString(twp), "not-exists")
 
-	target := Error(p, "k2")
-	a.True(errors.As(Error(p, "k1"), &target))
+	err1 := Error("k1")
+	a.True(errors.Is(err1, err1))
+	a.True(errors.Is(fmt.Errorf("err2 %w", err1), err1))
+	a.False(errors.Is(Error("k1"), Error("k1")))
+	a.False(errors.Is(Error("k1"), errors.New("k1")))
 }
