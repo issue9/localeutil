@@ -3,6 +3,7 @@ localeutil
 [![license](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat)](https://opensource.org/licenses/MIT)
 [![codecov](https://codecov.io/gh/issue9/localeutil/branch/master/graph/badge.svg)](https://codecov.io/gh/issue9/localeutil)
 [![PkgGoDev](https://pkg.go.dev/badge/github.com/issue9/localeutil)](https://pkg.go.dev/github.com/issue9/localeutil)
+![Go version](https://img.shields.io/github/go-mod/go-version/issue9/localeutil)
 ======
 
 提供了一些常用的本地化相关功能，依赖于 golang.org/x/text
