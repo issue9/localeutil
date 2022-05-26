@@ -14,7 +14,7 @@ import (
 	"golang.org/x/text/feature/plural"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message/catalog"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 type (
@@ -117,7 +117,6 @@ func (m *localeMessages) set(b *catalog.Builder) (err error) {
 	return nil
 }
 
-// UnmarshalXML implement xml.Unmarshaler
 func (c *localeCases) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 	for {
 		e := &localeCaseEntry{}
@@ -131,15 +130,11 @@ func (c *localeCases) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error
 	}
 }
 
-func (c *localeCases) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	kv := yaml.MapSlice{}
-	if err := unmarshal(&kv); err != nil {
-		return err
-	}
-
-	*c = make(localeCases, 0, len(kv))
-	for _, item := range kv {
-		*c = append(*c, item.Key, item.Value)
+func (c *localeCases) UnmarshalYAML(value *yaml.Node) error {
+	l := len(value.Content)
+	*c = make(localeCases, 0, l)
+	for i := 0; i < l; i += 2 {
+		*c = append(*c, value.Content[i].Value, value.Content[i+1].Value)
 	}
 
 	return nil

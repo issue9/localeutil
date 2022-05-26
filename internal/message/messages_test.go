@@ -12,7 +12,13 @@ import (
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
 	"golang.org/x/text/message/catalog"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
+)
+
+var (
+	_ yaml.Unmarshaler = &localeCases{}
+	_ xml.Unmarshaler  = &localeCases{}
+	_ json.Unmarshaler = &localeCases{}
 )
 
 func TestLoadFromFS_yaml(t *testing.T) {
