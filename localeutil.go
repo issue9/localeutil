@@ -17,7 +17,7 @@ type UnmarshalFunc = func([]byte, interface{}) error
 
 // DetectUserLanguageTag 检测当前用户的本地化信息
 //
-// *nix 系统会使用 LANG 环境变量中的值，windows 在 LANG
+// 使用 LANG 环境变量中的值，windows 在 LANG
 // 环境变量不存在的情况下，调用 GetUserDefaultLocaleName 函数获取。
 func DetectUserLanguageTag() (language.Tag, error) { return syslocale.Get() }
 
