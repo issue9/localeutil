@@ -12,7 +12,7 @@ type (
 	// LocaleStringer 本地化字符串的接口中
 	LocaleStringer interface {
 		// LocaleString 返回当前对象的本地化字符串
-		LocaleString(p *message.Printer) string
+		LocaleString(*message.Printer) string
 	}
 
 	phrase struct {

@@ -68,3 +68,45 @@ func TestError(t *testing.T) {
 	a.False(errors.Is(Error("k1"), Error("k1")))
 	a.False(errors.Is(Error("k1"), errors.New("k1")))
 }
+
+func BenchmarkPhrase_LocaleString(b *testing.B) {
+	a := assert.New(b, false)
+
+	a.NotError(message.SetString(language.SimplifiedChinese, "k1", "cn"))
+	a.NotError(message.SetString(language.SimplifiedChinese, "k2", "cn %[1]s"))
+	a.NotError(message.SetString(language.SimplifiedChinese, "k3", "cn %[1]s"))
+	a.NotError(message.SetString(language.SimplifiedChinese, "k4", "cn %[1]s %[2]s %[3]s"))
+	cnp := message.NewPrinter(language.SimplifiedChinese, message.Catalog(message.DefaultCatalog))
+
+	p1 := Phrase("k1")
+	a.Run("0 LocaleStringer", func(a *assert.Assertion) {
+		b := a.TB().(*testing.B)
+		for i := 0; i < b.N; i++ {
+			a.Equal(p1.LocaleString(cnp), "cn")
+		}
+	})
+
+	p2 := Phrase("k2", p1)
+	a.Run("1 LocaleStringer", func(a *assert.Assertion) {
+		b := a.TB().(*testing.B)
+		for i := 0; i < b.N; i++ {
+			a.Equal(p2.LocaleString(cnp), "cn cn")
+		}
+	})
+
+	p3 := Phrase("k3", p2)
+	a.Run("2 LocaleStringer", func(a *assert.Assertion) {
+		b := a.TB().(*testing.B)
+		for i := 0; i < b.N; i++ {
+			a.Equal(p3.LocaleString(cnp), "cn cn cn")
+		}
+	})
+
+	p4 := Phrase("k4", p1, p1, p1)
+	a.Run("3 LocaleStringer", func(a *assert.Assertion) {
+		b := a.TB().(*testing.B)
+		for i := 0; i < b.N; i++ {
+			a.Equal(p4.LocaleString(cnp), "cn cn cn cn")
+		}
+	})
+}
