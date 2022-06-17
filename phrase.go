@@ -3,10 +3,11 @@
 package localeutil
 
 import (
-	"fmt"
-
+	"golang.org/x/text/language"
 	"golang.org/x/text/message"
 )
+
+var defaultPrinter = message.NewPrinter(language.Und)
 
 type (
 	// LocaleStringer 本地化字符串的接口中
@@ -50,18 +51,9 @@ func (p phrase) LocaleString(printer *message.Printer) string {
 	return printer.Sprintf(p.key, values...)
 }
 
-func (p phrase) String() string {
-	if format, ok := p.key.(string); ok {
-		if len(p.values) == 0 {
-			return format
-		}
-		return fmt.Sprintf(format, p.values...)
-	}
+func (p phrase) String() string { return p.LocaleString(defaultPrinter) }
 
-	panic("不能转换成普通的字符串")
-}
-
-func (err *localeError) Error() string { return phrase(*err).String() }
+func (err *localeError) Error() string { return err.LocaleString(defaultPrinter) }
 
 func (err *localeError) LocaleString(p *message.Printer) string {
 	return phrase(*err).LocaleString(p)
