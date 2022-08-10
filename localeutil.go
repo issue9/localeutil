@@ -13,13 +13,19 @@ import (
 	"github.com/issue9/localeutil/internal/syslocale"
 )
 
-type UnmarshalFunc = func([]byte, interface{}) error
+// UnmarshalFunc 解析文本内容至对象的方法
+type UnmarshalFunc = message.UnmarshalFunc
 
 // DetectUserLanguageTag 检测当前用户的本地化信息
 //
 // 使用 LANG 环境变量中的值，windows 在 LANG
 // 环境变量不存在的情况下，调用 GetUserDefaultLocaleName 函数获取。
 func DetectUserLanguageTag() (language.Tag, error) { return syslocale.Get() }
+
+// LoadMessage 解析 data 并写入 b
+func LoadMessage(b *catalog.Builder, data []byte, unmarshal UnmarshalFunc) error {
+	return message.Load(b, data, unmarshal)
+}
 
 // LoadMessageFromFS 从文件系统中加载文件并写入 b
 //

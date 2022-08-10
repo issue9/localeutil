@@ -18,6 +18,9 @@ import (
 )
 
 type (
+	// UnmarshalFunc 解析文本内容至对象的方法
+	UnmarshalFunc = func([]byte, interface{}) error
+
 	localeMessages struct {
 		XMLName   struct{}        `xml:"messages" json:"-" yaml:"-"`
 		Languages []language.Tag  `xml:"language" json:"languages" yaml:"languages"`
@@ -58,23 +61,26 @@ type (
 	}
 )
 
-// LoadFromFS 加载文件内容并写入 b
-func LoadFromFS(b *catalog.Builder, fsys fs.FS, file string, unmarshal func([]byte, interface{}) error) error {
-	data, err := fs.ReadFile(fsys, file)
-	if err != nil {
-		return err
-	}
-
+// Load 从 data 解析本地化数据至 b
+func Load(b *catalog.Builder, data []byte, unmarshal UnmarshalFunc) error {
 	m := &localeMessages{}
 	if err := unmarshal(data, m); err != nil {
 		return err
 	}
-
 	return m.set(b)
 }
 
+// LoadFromFS 加载文件内容并写入 b
+func LoadFromFS(b *catalog.Builder, fsys fs.FS, file string, unmarshal UnmarshalFunc) error {
+	data, err := fs.ReadFile(fsys, file)
+	if err != nil {
+		return err
+	}
+	return Load(b, data, unmarshal)
+}
+
 // LoadFromFSGlob 加载多个文件内容并写入 b
-func LoadFromFSGlob(b *catalog.Builder, fsys fs.FS, glob string, unmarshal func([]byte, interface{}) error) error {
+func LoadFromFSGlob(b *catalog.Builder, fsys fs.FS, glob string, unmarshal UnmarshalFunc) error {
 	matches, err := fs.Glob(fsys, glob)
 	if err != nil {
 		return err
