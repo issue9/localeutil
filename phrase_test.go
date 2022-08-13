@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/issue9/assert/v2"
+	"github.com/issue9/assert/v3"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
 )
@@ -79,32 +79,32 @@ func BenchmarkPhrase_LocaleString(b *testing.B) {
 	cnp := message.NewPrinter(language.SimplifiedChinese, message.Catalog(message.DefaultCatalog))
 
 	p1 := Phrase("k1")
-	a.Run("0 LocaleStringer", func(a *assert.Assertion) {
-		b := a.TB().(*testing.B)
+	b.Run("0 LocaleStringer", func(b *testing.B) {
+		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			a.Equal(p1.LocaleString(cnp), "cn")
 		}
 	})
 
 	p2 := Phrase("k2", p1)
-	a.Run("1 LocaleStringer", func(a *assert.Assertion) {
-		b := a.TB().(*testing.B)
+	b.Run("1 LocaleStringer", func(b *testing.B) {
+		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			a.Equal(p2.LocaleString(cnp), "cn cn")
 		}
 	})
 
 	p3 := Phrase("k3", p2)
-	a.Run("2 LocaleStringer", func(a *assert.Assertion) {
-		b := a.TB().(*testing.B)
+	b.Run("2 LocaleStringer", func(b *testing.B) {
+		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			a.Equal(p3.LocaleString(cnp), "cn cn cn")
 		}
 	})
 
 	p4 := Phrase("k4", p1, p1, p1)
-	a.Run("3 LocaleStringer", func(a *assert.Assertion) {
-		b := a.TB().(*testing.B)
+	b.Run("3 LocaleStringer", func(b *testing.B) {
+		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			a.Equal(p4.LocaleString(cnp), "cn cn cn cn")
 		}
