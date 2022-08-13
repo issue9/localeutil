@@ -11,7 +11,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, macOS-latest, windows-latest]
         go: ['1.17.x', '1.19.x']
-        
+
     steps:
 
       - name: Check out code into the Go module directory
