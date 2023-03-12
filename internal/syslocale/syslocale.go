@@ -16,19 +16,20 @@ func Get() (language.Tag, error) {
 	if err != nil {
 		return language.Und, err
 	}
-
 	return language.Parse(name)
 }
 
 // 获取环境变量 LANG 中有关本地化信息的值。
+// https://www.gnu.org/software/gettext/manual/html_node/Locale-Environment-Variables.html
 func getEnvLang() string {
-	name := os.Getenv("LANG")
-
-	// LANG = zh_CN.UTF-8 过滤掉最后的编码方式
-	index := strings.LastIndexByte(name, '.')
-	if index > 0 {
-		name = name[:index]
+	for _, env := range [...]string{"LC_ALL", "LC_MESSAGES", "LANG"} {
+		if name := os.Getenv(env); len(name) > 0 {
+			// zh_CN.UTF-8 过滤掉最后的编码方式
+			if index := strings.LastIndexByte(name, '.'); index > 0 {
+				name = name[:index]
+			}
+			return name
+		}
 	}
-
-	return name
+	return ""
 }
