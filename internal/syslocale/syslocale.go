@@ -6,17 +6,11 @@ package syslocale
 import (
 	"os"
 	"strings"
-
-	"golang.org/x/text/language"
 )
 
 // Get 返回当前系统的本地化信息
-func Get() (language.Tag, error) {
-	name, err := getLocaleName()
-	if err != nil {
-		return language.Und, err
-	}
-	return language.Parse(name)
+func Get() (string, error) {
+	return getLocaleName()
 }
 
 // 获取环境变量 LANG 中有关本地化信息的值。
