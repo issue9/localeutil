@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 
-//go:build !windows && !js
-// +build !windows,!js
+//go:build !windows && !js && !darwin
+// +build !windows,!js,!darwin
 
 package syslocale
 
