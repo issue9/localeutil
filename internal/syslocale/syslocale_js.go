@@ -7,20 +7,20 @@ import (
 	"syscall/js"
 )
 
-func getNavigator() js.Value {
-	return js.Global().Get("navigator")
-}
+func getNavigator() js.Value { return js.Global().Get("navigator") }
 
-func getLocaleName() (string, error) {
+func getOSLocaleName() string {
 	nav := getNavigator()
 	if nav.IsUndefined() {
-		return "", errors.New("未定义 window.navigator")
+		log.Println("未定义 window.navigator")
+		return ""
 	}
 
 	lang := nav.Get("language")
 	if lang.IsUndefined() {
-		return "", errors.New("未定义 window.navigator.language")
+		log.Println("未定义 window.navigator.language")
+		return ""
 	}
 
-	return lang.String(), nil
+	return lang.String()
 }

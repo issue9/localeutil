@@ -5,29 +5,27 @@ package syslocale
 import (
 	"bytes"
 	"fmt"
+	"log"
 	"os/exec"
 	"strings"
 )
 
-func getLocaleName() (string, error) {
-	if l := getEnvLang(); l != "" { // 优先看环境变量
-		return l, nil
-	}
-
-	if l, err := parseDefaultAppleLocale("-g"); err == nil {
-		return l, nil
+func getOSLocaleName() string {
+	if l := parseDefaultAppleLocale("-g"); l != "" {
+		return l
 	}
 	return parseDefaultAppleLocale("/Library/Preferences/.GlobalPreferences")
 }
 
-func parseDefaultAppleLocale(t string) (string, error) {
+func parseDefaultAppleLocale(t string) string {
 	b := &bytes.Buffer{}
 
 	cmd := exec.Command("defaults", "read", t, "AppleLocale")
 	cmd.Stdout = b
 	if err := cmd.Run(); err != nil {
-		return "", fmt.Errorf("检测用户环境时返回错误：%w", err)
+		log.Println(fmt.Errorf("检测用户环境时返回错误：%w", err))
+		return ""
 	}
 
-	return strings.TrimSpace(b.String()), nil
+	return strings.TrimSpace(b.String())
 }

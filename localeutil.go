@@ -18,21 +18,19 @@ type UnmarshalFunc = message.UnmarshalFunc
 
 // DetectUserLanguage 检测当前用户的本地化信息
 //
-// 默认会按顺序读取 LC_ALL、LC_MESSAGES 和 LANG 环境变量作为当前的语言环境。
-// windows 在 LANG 环境变量不存在的情况下，调用 GetUserDefaultLocaleName 函数获取；
-// darwin 会在 LANG 不存在的情况下，尝试读取 defaults read -g AppleLocale 中的值；
-// js 平台则无视 LANG 环境变量，从 window.navigator.language 读取值；
-func DetectUserLanguage() (string, error) { return syslocale.Get() }
+// 按以下顺序读取本地化信息：
+//   - 环境变量 LANGUAGE；
+//   - 平台相关，比如 windows 下调用 GetUserDefaultLocaleName 等；
+//   - 按顺序读取 LC_ALL、LC_MESSAGES 和 LANG 环境变量；
+//
+// 所有的环境变量遵守 tag.encoding 的格式，比如 zh_CN.UTF-8，其中的 encoding 可以省略。
+func DetectUserLanguage() string { return syslocale.Get() }
 
 // DetectUserLanguageTag 检测当前用户的本地化信息
 //
 // 文档说明参考 [DetectUserLanguage]
 func DetectUserLanguageTag() (language.Tag, error) {
-	l, err := syslocale.Get()
-	if err != nil {
-		return language.Und, err
-	}
-	return language.Parse(l)
+	return language.Parse(syslocale.Get())
 }
 
 // LoadMessage 解析 data 并写入 b

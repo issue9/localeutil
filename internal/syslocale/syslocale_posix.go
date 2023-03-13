@@ -5,4 +5,4 @@
 
 package syslocale
 
-func getLocaleName() (string, error) { return getEnvLang(), nil }
+func getOSLocaleName() (string, error) { return "", nil }
