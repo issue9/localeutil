@@ -8,6 +8,9 @@ localeutil
 
 提供了一些常用的本地化相关功能，依赖于 golang.org/x/text
 
+- DetectUserLanguage 检测当前用户的本地化信息
+- LoadMessage 从 yaml、json 等格式中加载本地化的信息内容
+
 安装
 ----
 
