@@ -8,9 +8,9 @@ import (
 	"github.com/issue9/assert/v3"
 )
 
-func TestGetOSLocaleName(t *testing.T) {
+func TestGet(t *testing.T) {
 	a := assert.New(t, false)
 
-	name := getOSLocaleName()
+	name := Get()
 	a.True(len(name) > 0)
 }
