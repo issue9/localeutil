@@ -7,6 +7,7 @@ package syslocale
 
 import (
 	"bufio"
+	"errors"
 	"log"
 	"os"
 	"path/filepath"
@@ -40,7 +41,9 @@ func getOSLocaleName() string {
 func readFromFile(dir string) string {
 	f, err := os.Open(filepath.Join(dir, "locale.conf"))
 	if err != nil {
-		log.Println(err)
+		if !errors.Is(err, os.ErrNotExist) {
+			log.Println(err)
+		}
 		return ""
 	}
 	defer f.Close()
