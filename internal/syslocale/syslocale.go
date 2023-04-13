@@ -15,7 +15,7 @@ func Get() string {
 	}
 
 	if lang := getOSLocaleName(); lang != "" {
-		return lang
+		return trimLocale(lang)
 	}
 
 	for _, env := range [...]string{"LC_ALL", "LC_MESSAGES", "LANG"} {
@@ -27,11 +27,12 @@ func Get() string {
 	return ""
 }
 
-func getEnv(env string) string {
-	name := os.Getenv(env)
-	// zh_CN.UTF-8 过滤掉最后的编码方式
-	if index := strings.LastIndexByte(name, '.'); index > 0 {
-		name = name[:index]
+func getEnv(env string) string { return trimLocale(os.Getenv(env)) }
+
+// zh_CN.UTF-8 过滤掉最后的编码方式
+func trimLocale(v string) string {
+	if index := strings.LastIndexByte(v, '.'); index > 0 {
+		v = v[:index]
 	}
-	return strings.TrimSpace(name)
+	return strings.TrimSpace(v)
 }
