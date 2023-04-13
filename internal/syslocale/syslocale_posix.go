@@ -59,7 +59,7 @@ func readFromFile(dir string) string {
 		}
 
 		if val := strings.TrimSpace(vals[1]); val != "" {
-			return val
+			return strings.Trim(val, `"`)
 		}
 	}
 	return ""

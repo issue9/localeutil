@@ -29,15 +29,15 @@ type (
 
 // Phrase 返回一段未翻译的语言片段
 //
-// key 和 val 参数与 golang.org/x/text/message.Printer.Sprintf 的参数相同。
-// 如果 val 也实现了 LocaleStringer 接口，则会先调用 val 的 LocaleString 方法再传递给 Sprintf。
+// key 和 val 参数与 [message.Printer.Sprintf] 的参数相同。
+// 如果 val 也实现了 [LocaleStringer] 接口，则会先调用 val 的 LocaleString 方法。
 func Phrase(key Key, val ...interface{}) LocaleStringer {
 	return phrase{key: key, values: val}
 }
 
 // Error 返回未翻译的错误对象
 //
-// 该对象同时实现了 LocaleStringer 接口。
+// 该对象同时实现了 [LocaleStringer] 接口。
 func Error(key Key, val ...interface{}) error {
 	return &localeError{key: key, values: val}
 }
