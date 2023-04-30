@@ -17,7 +17,7 @@ var defaultWidthOptions = WidthOptions{
 
 // WidthOptions 用于指定各类字符的宽度
 //
-// NOTE: 对于 EastAsianAmbiguous 不同的字体可能有不同的设置。
+// NOTE: 对于 [width.EastAsianAmbiguous] 不同的字体可能有不同的设置。
 type WidthOptions map[width.Kind]int
 
 // Width 计算字符串的宽度
@@ -28,8 +28,7 @@ func (wo WidthOptions) Width(s string) (w int) {
 	return w
 }
 
-// Width 计算字符串的宽度
+// Width 采用 defaultWidthOptions 计算字符串的宽度
 //
-// 采用 defaultWidthOptions 作为配置，
-// 如果有特殊要求，可以使用 [WidthOptions.Width] 自定义各类字符的宽度。
+// 如果有特殊要求，可以使用 [WidthOptions] 自定义各类字符的宽度。
 func Width(s string) int { return defaultWidthOptions.Width(s) }
