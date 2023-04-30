@@ -17,7 +17,7 @@ func TestLoadMessagesFromFS(t *testing.T) {
 	a := assert.New(t, false)
 
 	b := catalog.NewBuilder()
-	fsys := os.DirFS("./internal/message/testdata")
+	fsys := os.DirFS("./message/testdata")
 	a.NotError(LoadMessageFromFS(b, fsys, "cmn-hans.json", json.Unmarshal))
 	p := message.NewPrinter(language.MustParse("cmn-hans"), message.Catalog(b))
 	phrase := Phrase("k3", 3, 1)
@@ -28,7 +28,7 @@ func TestLoadMessagesFromFSGlob(t *testing.T) {
 	a := assert.New(t, false)
 
 	b := catalog.NewBuilder()
-	fsys := os.DirFS("./internal/message/testdata")
+	fsys := os.DirFS("./message/testdata")
 	a.NotError(LoadMessageFromFSGlob(b, fsys, "*.json", json.Unmarshal))
 	p := message.NewPrinter(language.MustParse("cmn-hans"), message.Catalog(b))
 	phrase := Phrase("k3", 3, 1)

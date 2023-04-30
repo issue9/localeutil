@@ -16,9 +16,9 @@ import (
 )
 
 var (
-	_ yaml.Unmarshaler = &localeCases{}
-	_ xml.Unmarshaler  = &localeCases{}
-	_ json.Unmarshaler = &localeCases{}
+	_ yaml.Unmarshaler = &Cases{}
+	_ xml.Unmarshaler  = &Cases{}
+	_ json.Unmarshaler = &Cases{}
 )
 
 func TestLoadFromFS_yaml(t *testing.T) {

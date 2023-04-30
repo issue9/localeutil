@@ -9,8 +9,8 @@ import (
 	"golang.org/x/text/language"
 	"golang.org/x/text/message/catalog"
 
-	"github.com/issue9/localeutil/internal/message"
 	"github.com/issue9/localeutil/internal/syslocale"
+	"github.com/issue9/localeutil/message"
 )
 
 // UnmarshalFunc 解析文本内容至对象的方法
