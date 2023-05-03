@@ -1,21 +1,13 @@
 // SPDX-License-Identifier: MIT
 
-// Package message 从文件中加载本地化信息
+// Package message 本地化的语言文件处理
 package message
 
 import (
-	"bytes"
-	"encoding/json"
-	"encoding/xml"
-	"errors"
-	"io"
 	"io/fs"
 	"os"
 
-	"golang.org/x/text/feature/plural"
 	"golang.org/x/text/language"
-	"golang.org/x/text/message/catalog"
-	"gopkg.in/yaml.v3"
 )
 
 type (
@@ -43,25 +35,31 @@ type (
 	}
 
 	Select struct {
-		Arg    int    `xml:"arg,attr" json:"arg" yaml:"arg"`
-		Format string `xml:"format,attr,omitempty" json:"format,omitempty" yaml:"format,omitempty"`
-		Cases  Cases  `xml:"case" json:"cases" yaml:"cases"`
+		Arg    int     `xml:"arg,attr" json:"arg" yaml:"arg"`
+		Format string  `xml:"format,attr,omitempty" json:"format,omitempty" yaml:"format,omitempty"`
+		Cases  []*Case `xml:"case" json:"cases" yaml:"cases"`
 	}
 
 	Var struct {
-		Name   string `xml:"name,attr" json:"name" yaml:"name"`
-		Arg    int    `xml:"arg,attr" json:"arg" yaml:"arg"`
-		Format string `xml:"format,attr,omitempty" json:"format,omitempty" yaml:"format,omitempty"`
-		Cases  Cases  `xml:"case" json:"cases" yaml:"cases"`
+		Name   string  `xml:"name,attr" json:"name" yaml:"name"`
+		Arg    int     `xml:"arg,attr" json:"arg" yaml:"arg"`
+		Format string  `xml:"format,attr,omitempty" json:"format,omitempty" yaml:"format,omitempty"`
+		Cases  []*Case `xml:"case" json:"cases" yaml:"cases"`
 	}
 
-	Cases []interface{}
-
-	caseEntry struct {
-		Cond  string `xml:"cond,attr"`
+	Case struct {
+		Case  string `xml:"case,attr" json:"case" yaml:"case"`
 		Value string `xml:",chardata"`
 	}
 )
+
+func ex(cases []*Case) []interface{} {
+	data := make([]interface{}, 0, len(cases)*2)
+	for _, c := range cases {
+		data = append(data, c.Case, c.Value)
+	}
+	return data
+}
 
 func Unmarshal(data []byte, u UnmarshalFunc) (*Messages, error) {
 	m := &Messages{}
@@ -70,24 +68,22 @@ func Unmarshal(data []byte, u UnmarshalFunc) (*Messages, error) {
 }
 
 func UnmarshalFile(file string, u UnmarshalFunc) (*Messages, error) {
-	data, err := os.ReadFile(file)
-	if err != nil {
-		return nil, err
-	}
-	return Unmarshal(data, u)
+	return unmarshalFS(func() ([]byte, error) { return os.ReadFile(file) }, u)
 }
 
 func UnmarshalFS(fsys fs.FS, name string, u UnmarshalFunc) (*Messages, error) {
-	data, err := fs.ReadFile(fsys, name)
+	return unmarshalFS(func() ([]byte, error) { return fs.ReadFile(fsys, name) }, u)
+}
+
+func unmarshalFS(f func() ([]byte, error), u UnmarshalFunc) (*Messages, error) {
+	data, err := f()
 	if err != nil {
 		return nil, err
 	}
 	return Unmarshal(data, u)
 }
 
-func Marshal(f MarshalFunc, m *Messages) ([]byte, error) {
-	return f(m)
-}
+func Marshal(f MarshalFunc, m *Messages) ([]byte, error) { return f(m) }
 
 func MarshalFile(f MarshalFunc, m *Messages, path string) error {
 	data, err := Marshal(f, m)
@@ -95,74 +91,4 @@ func MarshalFile(f MarshalFunc, m *Messages, path string) error {
 		return err
 	}
 	return os.WriteFile(path, data, os.ModePerm)
-}
-
-func (m *Messages) set(b *catalog.Builder) (err error) {
-	for _, tag := range m.Languages {
-		for _, msg := range m.Messages {
-			switch {
-			case msg.Message.Vars != nil:
-				vars := msg.Message.Vars
-				msgs := make([]catalog.Message, 0, len(vars))
-				for _, v := range vars {
-					mm := catalog.Var(v.Name, plural.Selectf(v.Arg, v.Format, v.Cases...))
-					msgs = append(msgs, mm)
-				}
-				msgs = append(msgs, catalog.String(msg.Message.Msg))
-				err = b.Set(tag, msg.Key, msgs...)
-			case msg.Message.Select != nil:
-				s := msg.Message.Select
-				err = b.Set(tag, msg.Key, plural.Selectf(s.Arg, s.Format, s.Cases...))
-			case msg.Message.Msg != "":
-				err = b.SetString(tag, msg.Key, msg.Message.Msg)
-			}
-
-			if err != nil {
-				return err
-			}
-		}
-	}
-
-	return nil
-}
-
-func (c *Cases) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
-	for {
-		e := &caseEntry{}
-		if err := d.DecodeElement(e, &start); errors.Is(err, io.EOF) {
-			return nil
-		} else if err != nil {
-			return err
-		}
-
-		*c = append(*c, e.Cond, e.Value)
-	}
-}
-
-func (c *Cases) UnmarshalYAML(value *yaml.Node) error {
-	l := len(value.Content)
-	*c = make(Cases, 0, l)
-	for i := 0; i < l; i += 2 {
-		*c = append(*c, value.Content[i].Value, value.Content[i+1].Value)
-	}
-
-	return nil
-}
-
-func (c *Cases) UnmarshalJSON(data []byte) error {
-	d := json.NewDecoder(bytes.NewBuffer(data))
-	for {
-		t, err := d.Token()
-		if errors.Is(err, io.EOF) {
-			return nil
-		} else if err != nil {
-			return err
-		}
-
-		if t == json.Delim('{') || t == json.Delim('}') {
-			continue
-		}
-
-		*c = append(*c, t)
-	}
 }
