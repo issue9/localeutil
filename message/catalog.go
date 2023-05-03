@@ -10,8 +10,8 @@ import (
 
 // Load 从 data 解析本地化数据至 b
 func Load(b *catalog.Builder, data []byte, unmarshal UnmarshalFunc) error {
-	m := &Messages{}
-	if err := unmarshal(data, m); err != nil {
+	m, err := Unmarshal(data, unmarshal)
+	if err != nil {
 		return err
 	}
 	return m.set(b)

@@ -9,6 +9,8 @@ import (
 	"encoding/xml"
 	"errors"
 	"io"
+	"io/fs"
+	"os"
 
 	"golang.org/x/text/feature/plural"
 	"golang.org/x/text/language"
@@ -19,6 +21,8 @@ import (
 type (
 	// UnmarshalFunc 解析文本内容至对象的方法
 	UnmarshalFunc = func([]byte, interface{}) error
+
+	MarshalFunc = func(interface{}) ([]byte, error)
 
 	Messages struct {
 		XMLName   struct{}       `xml:"messages" json:"-" yaml:"-"`
@@ -54,11 +58,44 @@ type (
 	Cases []interface{}
 
 	caseEntry struct {
-		XMLName struct{} `xml:"case"`
-		Cond    string   `xml:"cond,attr"`
-		Value   string   `xml:",chardata"`
+		Cond  string `xml:"cond,attr"`
+		Value string `xml:",chardata"`
 	}
 )
+
+func Unmarshal(data []byte, u UnmarshalFunc) (*Messages, error) {
+	m := &Messages{}
+	err := u(data, m)
+	return m, err
+}
+
+func UnmarshalFile(file string, u UnmarshalFunc) (*Messages, error) {
+	data, err := os.ReadFile(file)
+	if err != nil {
+		return nil, err
+	}
+	return Unmarshal(data, u)
+}
+
+func UnmarshalFS(fsys fs.FS, name string, u UnmarshalFunc) (*Messages, error) {
+	data, err := fs.ReadFile(fsys, name)
+	if err != nil {
+		return nil, err
+	}
+	return Unmarshal(data, u)
+}
+
+func Marshal(f MarshalFunc, m *Messages) ([]byte, error) {
+	return f(m)
+}
+
+func MarshalFile(f MarshalFunc, m *Messages, path string) error {
+	data, err := Marshal(f, m)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, data, os.ModePerm)
+}
 
 func (m *Messages) set(b *catalog.Builder) (err error) {
 	for _, tag := range m.Languages {
