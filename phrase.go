@@ -18,7 +18,7 @@ type (
 
 	phrase struct {
 		key    Key
-		values []interface{}
+		values []any
 	}
 
 	localeError phrase
@@ -31,19 +31,19 @@ type (
 //
 // key 和 val 参数与 [message.Printer.Sprintf] 的参数相同。
 // 如果 val 也实现了 [LocaleStringer] 接口，则会先调用 val 的 LocaleString 方法。
-func Phrase(key Key, val ...interface{}) LocaleStringer {
+func Phrase(key Key, val ...any) LocaleStringer {
 	return phrase{key: key, values: val}
 }
 
 // Error 返回未翻译的错误对象
 //
 // 该对象同时实现了 [LocaleStringer] 接口。
-func Error(key Key, val ...interface{}) error {
+func Error(key Key, val ...any) error {
 	return &localeError{key: key, values: val}
 }
 
 func (p phrase) LocaleString(printer *Printer) string {
-	values := make([]interface{}, 0, len(p.values))
+	values := make([]any, 0, len(p.values))
 	for _, value := range p.values {
 		if ls, ok := value.(LocaleStringer); ok {
 			value = ls.LocaleString(printer)

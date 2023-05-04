@@ -17,5 +17,6 @@
 # ide
 .vscode/
 .idea/
+.fleet/
 *.swp
 .DS_Store

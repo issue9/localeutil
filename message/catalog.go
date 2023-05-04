@@ -3,15 +3,22 @@
 package message
 
 import (
-	"io/fs"
-
 	"golang.org/x/text/feature/plural"
 	"golang.org/x/text/message/catalog"
 )
 
-func (m *Messages) set(b *catalog.Builder) (err error) {
-	for _, tag := range m.Languages {
-		for _, msg := range m.Messages {
+func ex(cases []*Case) []any {
+	data := make([]any, 0, len(cases)*2)
+	for _, c := range cases {
+		data = append(data, c.Case, c.Value)
+	}
+	return data
+}
+
+// Catalog 将当前对象附加在 [catalog.Catalog] 上
+func (m *Messages) Catalog(b *catalog.Builder) (err error) {
+	for _, lang := range m.Languages {
+		for _, msg := range lang.Messages {
 			switch {
 			case msg.Message.Vars != nil:
 				vars := msg.Message.Vars
@@ -21,12 +28,12 @@ func (m *Messages) set(b *catalog.Builder) (err error) {
 					msgs = append(msgs, mm)
 				}
 				msgs = append(msgs, catalog.String(msg.Message.Msg))
-				err = b.Set(tag, msg.Key, msgs...)
+				err = b.Set(lang.ID, msg.Key, msgs...)
 			case msg.Message.Select != nil:
 				s := msg.Message.Select
-				err = b.Set(tag, msg.Key, plural.Selectf(s.Arg, s.Format, ex(s.Cases)...))
+				err = b.Set(lang.ID, msg.Key, plural.Selectf(s.Arg, s.Format, ex(s.Cases)...))
 			case msg.Message.Msg != "":
-				err = b.SetString(tag, msg.Key, msg.Message.Msg)
+				err = b.SetString(lang.ID, msg.Key, msg.Message.Msg)
 			}
 
 			if err != nil {
@@ -38,35 +45,3 @@ func (m *Messages) set(b *catalog.Builder) (err error) {
 	return nil
 }
 
-// Load 从 data 解析本地化数据至 b
-func Load(b *catalog.Builder, data []byte, unmarshal UnmarshalFunc) error {
-	m, err := Unmarshal(data, unmarshal)
-	if err != nil {
-		return err
-	}
-	return m.set(b)
-}
-
-// LoadFromFS 加载文件内容并写入 b
-func LoadFromFS(b *catalog.Builder, fsys fs.FS, file string, unmarshal UnmarshalFunc) error {
-	data, err := fs.ReadFile(fsys, file)
-	if err != nil {
-		return err
-	}
-	return Load(b, data, unmarshal)
-}
-
-// LoadFromFSGlob 加载多个文件内容并写入 b
-func LoadFromFSGlob(b *catalog.Builder, fsys fs.FS, glob string, unmarshal UnmarshalFunc) error {
-	matches, err := fs.Glob(fsys, glob)
-	if err != nil {
-		return err
-	}
-
-	for _, match := range matches {
-		if err := LoadFromFS(b, fsys, match, unmarshal); err != nil {
-			return err
-		}
-	}
-	return nil
-}
