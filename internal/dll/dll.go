@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: MIT
 
+//go:build windows
+
 // Package dll windows 平台下一些 dll
 package dll
 
