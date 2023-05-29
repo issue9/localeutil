@@ -17,5 +17,5 @@ func TestAppLocale(t *testing.T) {
 
 	a.NotError(SetAppLocale(app, "zh-CN", "zh-TW"))
 	id, err := AppLocale(app)
-	a.NotError(err).Equal(id, `"zh-CN"`)
+	a.NotError(err).Equal(id, `zh-CN`)
 }

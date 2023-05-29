@@ -7,6 +7,7 @@ package apple
 
 import (
 	"strings"
+	"unicode"
 
 	"github.com/issue9/localeutil/internal/defaults"
 	"github.com/issue9/localeutil/internal/syslocale"
@@ -29,7 +30,9 @@ func AppLocale(app string) (string, error) {
 	if len(langs) == 0 {
 		return syslocale.Get(), nil
 	}
-	return strings.TrimSpace(langs[0]), nil
+	return strings.TrimFunc(langs[0], func(r rune) bool {
+		return r == '"' || unicode.IsSpace(r)
+	}), nil
 }
 
 // SetAppLocale 设置 app 的界面语言
