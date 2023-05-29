@@ -20,19 +20,16 @@ const appleLanguagesKey = "AppleLanguages"
 // app 表示该应用的 ID；
 //
 // NOTE: macOS 系统中可以在设置中修改每个应用的语言，该接口可以获取此值。
-func AppLocale(app string) (string, error) {
-	v, err := defaults.Read(appleLanguagesKey, app)
-	if err != nil {
-		return "", err
-	}
+func AppLocale(app string) string {
+	v := defaults.Read(appleLanguagesKey, app)
 
 	langs := strings.Split(strings.Trim(v, "()"), ",")
 	if len(langs) == 0 {
-		return syslocale.Get(), nil
+		return syslocale.Get()
 	}
 	return strings.TrimFunc(langs[0], func(r rune) bool {
 		return r == '"' || unicode.IsSpace(r)
-	}), nil
+	})
 }
 
 // SetAppLocale 设置 app 的界面语言

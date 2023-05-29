@@ -18,6 +18,12 @@ func TestReadWrite(t *testing.T) {
 
 	a.NotError(Write(domain, key, "string", "123"))
 
-	v, err := ReadDomains(key, domain)
-	a.NotError(err).Equal(v, "123")
+	v := ReadDomains(key, domain)
+	a.Equal(v, "123")
+
+	v = ReadDomains("not-exists", domain)
+	a.Equal(v, "")
+
+	v = ReadDomains(key, "not-exists")
+	a.Equal(v, "")
 }
