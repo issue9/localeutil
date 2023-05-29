@@ -32,7 +32,7 @@ func Read(key, domain string) string {
 	if err := cmd.Run(); err != nil {
 		// 无法判断是找不到 key 还是 domain 不存在，
 		// 干脆只输出错误，但是不作其它处理。
-		log.Fatalln(err)
+		log.Println(err)
 		return ""
 	}
 
