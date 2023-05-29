@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: MIT
 
+//go:build darwin || ios
+
 package apple
 
 import (
