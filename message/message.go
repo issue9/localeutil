@@ -139,45 +139,26 @@ func (l *Language) merge(l2 *Language) {
 func (m *Messages) Bytes(f MarshalFunc) ([]byte, error) { return f(m) }
 
 // SaveFile 将当前对象编码为文本并存入 path
-func (m *Messages) SaveFile(dir, ext string, f MarshalFunc) error {
+func (m *Messages) SaveFile(path string, f MarshalFunc, mode fs.FileMode) error {
+	data, err := m.Bytes(f)
+	if err == nil {
+		err = os.WriteFile(path, data, mode)
+	}
+	return err
+}
+
+// SaveFiles 将当前对象按语言 ID 分类保存
+func (m *Messages) SaveFiles(dir, ext string, f MarshalFunc, mode fs.FileMode) error {
 	if ext[0] != '.' {
 		ext = "." + ext
 	}
 
-	msgs, err := m.marshal(f)
-	if err != nil {
-		return err
-	}
-
-	for k, v := range msgs {
-		if err := os.WriteFile(filepath.Join(dir, k+ext), v, os.ModePerm); err != nil {
+	for _, l := range m.Languages {
+		msg := &Messages{Languages: []*Language{l}}
+		path := filepath.Join(dir, l.ID.String()+ext)
+		if err := msg.SaveFile(path, f, mode); err != nil {
 			return err
 		}
 	}
-
 	return nil
-}
-
-func (m *Messages) marshal(f MarshalFunc) (map[string][]byte, error) {
-	msgs := m.split()
-	ret := make(map[string][]byte, len(msgs))
-
-	for _, msg := range msgs {
-		data, err := msg.Bytes(f)
-		if err != nil {
-			return nil, err
-		}
-
-		ret[msg.Languages[0].ID.String()] = data
-	}
-
-	return ret, nil
-}
-
-func (m *Messages) split() []*Messages {
-	mm := make([]*Messages, 0, len(m.Languages))
-	for _, l := range m.Languages {
-		mm = append(mm, &Messages{Languages: []*Language{l}})
-	}
-	return mm
 }

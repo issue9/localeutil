@@ -34,5 +34,5 @@ func TestMessages_SaveFile(t *testing.T) {
 	m := &Messages{}
 	a.NotError(m.LoadFS(os.DirFS("./testdata"), "cmn-hans.json", json.Unmarshal))
 	a.NotError(m.LoadFS(os.DirFS("./testdata"), "cmn-hant.xml", xml.Unmarshal))
-	a.NotError(m.SaveFile("./testdata/", ".out", json.Marshal))
+	a.NotError(m.SaveFiles("./testdata/", ".out", json.Marshal, os.ModePerm))
 }
