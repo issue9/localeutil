@@ -2,10 +2,7 @@
 
 package syslocale
 
-import (
-	"errors"
-	"syscall/js"
-)
+import "syscall/js"
 
 func getNavigator() js.Value { return js.Global().Get("navigator") }
 
