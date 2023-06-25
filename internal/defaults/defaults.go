@@ -7,7 +7,6 @@ package defaults
 
 import (
 	"bytes"
-	"log"
 	"os/exec"
 	"strings"
 )
@@ -29,10 +28,9 @@ func Read(key, domain string) string {
 
 	cmd := exec.Command("defaults", "read", domain, key)
 	cmd.Stdout = b
-	if err := cmd.Run(); err != nil {
-		// 无法判断是找不到 key 还是 domain 不存在，
-		// 干脆只输出错误，但是不作其它处理。
-		log.Println(err)
+	if cmd.Run() != nil {
+		// Run() 返回的 err 本身无意思，错误信息存在 cmd.Stderr 或是 cmd.Stdout。
+		// 也无法判断是找不到 key 还是 domain，干脆不作其它处理。
 		return ""
 	}
 
