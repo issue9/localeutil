@@ -67,7 +67,7 @@ func (m *Messages) Load(data []byte, u UnmarshalFunc) error {
 	if err := u(data, msgs); err != nil {
 		return err
 	}
-	m.merge(msgs)
+	m.Merge(msgs)
 
 	return nil
 }
@@ -116,7 +116,8 @@ func (m *Messages) LoadFSGlob(fsys fs.FS, glob string, u UnmarshalFunc) error {
 	return nil
 }
 
-func (m *Messages) merge(m2 *Messages) {
+// Merge 将 m2 并入当前对象
+func (m *Messages) Merge(m2 *Messages) {
 	for _, l := range m2.Languages {
 		ll, found := sliceutil.At(m.Languages, func(ll *Language) bool { return ll.ID == l.ID })
 		if found {
