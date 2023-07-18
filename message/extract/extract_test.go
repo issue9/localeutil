@@ -8,8 +8,9 @@ import (
 	"testing"
 
 	"github.com/issue9/assert/v3"
-	"github.com/issue9/localeutil/message"
 	"github.com/issue9/sliceutil"
+
+	"github.com/issue9/localeutil/message"
 )
 
 func TestExtract(t *testing.T) {
@@ -23,7 +24,8 @@ func TestExtract(t *testing.T) {
 	m := msg.Languages[0].Messages
 	a.NotNil(m).
 		Length(sliceutil.Dup(m, func(m1, m2 message.Message) bool { return m1.Key == m2.Key }), 0). // 没有重复值
-		Length(m, 6)
+		Length(m, 6).
+		Equal(m[0].Key, "alias 1")
 
 	for _, mm := range m {
 		t.Log(mm.Key)

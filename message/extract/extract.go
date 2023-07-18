@@ -11,6 +11,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 
@@ -62,6 +63,8 @@ func Extract(ctx context.Context, lang, root string, r bool, log Logger, f ...st
 	if err := ex.scanDirs(ctx, dirs); err != nil {
 		return nil, err
 	}
+
+	sort.SliceStable(ex.msg, func(i, j int) bool { return ex.msg[i].Key < ex.msg[j].Key })
 
 	return &message.Messages{
 		Languages: []*message.Language{
@@ -160,21 +163,23 @@ func inspect(fset *token.FileSet, expr *ast.CallExpr, mods []importFunc, log Log
 		return msg
 	}
 
+	var key string
 	switch v := expr.Args[0].(type) {
 	case *ast.BasicLit:
-		msg.Key = v.Value
-		msg.Message.Msg = v.Value
+		key = v.Value
 	case *ast.Ident: // 常量/变量
 		switch d := v.Obj.Decl.(type) {
 		case *ast.ValueSpec:
 			if d.Names != nil && d.Names[0].Obj.Kind == ast.Con {
-				msg.Key = d.Values[0].(*ast.BasicLit).Value
-				msg.Message.Msg = msg.Key
+				key = d.Values[0].(*ast.BasicLit).Value
 			} else {
 				log.Printf("当前类型 %s 无法转换成本地化信息", d.Names[0].Obj.Kind)
 			}
 		}
 	}
 
+	key = strings.Trim(key, "\"")
+	msg.Key = key
+	msg.Message.Msg = key
 	return msg
 }
