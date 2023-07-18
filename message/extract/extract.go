@@ -178,7 +178,10 @@ func inspect(fset *token.FileSet, expr *ast.CallExpr, mods []importFunc, log Log
 		}
 	}
 
-	key = strings.Trim(key, "\"")
+	if key == "" {
+		return msg
+	}
+	key = key[1 : len(key)-1]
 	msg.Key = key
 	msg.Message.Msg = key
 	return msg
