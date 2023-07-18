@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 
+// Package extract 提供从 Go 源码中提取本地化内容的功能
 package extract
 
 import (
@@ -7,18 +8,31 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
-	"github.com/issue9/localeutil/message"
 	"github.com/issue9/sliceutil"
 	"golang.org/x/text/language"
+
+	"github.com/issue9/localeutil/message"
 )
 
 // Logger 日志输出接口
 type Logger interface {
+	Print(...any)
 	Printf(string, ...any)
+}
+
+type extracter struct {
+	log   Logger
+	funcs []localeFunc
+	fset  *token.FileSet
+
+	mux sync.Mutex
+	msg []message.Message
 }
 
 // Extract 提取本地化内容
@@ -26,9 +40,8 @@ type Logger interface {
 // lang 代码的文本所使用的语言；
 // root 需要提取本地化内容的源码目录；
 // f 表示被用于本地化的函数，所有 f 指定的函数，其参数都将被提取为本地化的内容。
-// f 每个元素的格式为 mod/path.func，mod/path 为包的导出路径，func 为函数名；
-//
-// 如果源码错误，返回该错误信息。如果是因为不能序列化，通过 log 输出错误信息；
+// f 每个元素的格式为 mod/path.func，mod/path 为包的导出路径，func 为函数名。
+// f 的函数签名应该始终与 [localeutil.Phrase] 相同；
 func Extract(ctx context.Context, lang, root string, r bool, log Logger, f ...string) (*message.Messages, error) {
 	// NOTE: 有可能存在将 localeutil.Phrase 二次封装的情况，
 	// 为了尽可能多地找到本地化字符串，所以采用用户指定函数的方法。
@@ -38,55 +51,84 @@ func Extract(ctx context.Context, lang, root string, r bool, log Logger, f ...st
 		return nil, err
 	}
 
-	funs := split(f...)
-	fset := token.NewFileSet()
-	l := &message.Language{ID: language.MustParse(lang), Messages: make([]message.Message, 0, 100)}
+	ex := &extracter{
+		log:   log,
+		funcs: split(f...),
+		fset:  token.NewFileSet(),
 
-	for _, dir := range dirs {
-		entries, err := os.ReadDir(dir)
-		if err != nil {
-			return nil, err
-		}
+		msg: make([]message.Message, 0, 100),
+	}
 
-		for _, e := range entries {
-			name := strings.ToLower(e.Name())
-			if e.IsDir() || filepath.Ext(name) != ".go" || strings.HasSuffix(name, "_test.go") {
-				continue
-			}
-
-			p := filepath.Join(dir, e.Name())
-			f, err := parser.ParseFile(fset, p, nil, parser.ParseComments)
-			if err != nil {
-				return nil, err
-			}
-
-			inspectFile(fset, f, funs, l, log)
-		}
+	if err := ex.scanDirs(ctx, dirs); err != nil {
+		return nil, err
 	}
 
 	return &message.Messages{
-		Languages: []*message.Language{l},
+		Languages: []*message.Language{
+			{ID: language.MustParse(lang), Messages: ex.msg},
+		},
 	}, nil
 }
 
-func inspectFile(fset *token.FileSet, f *ast.File, funs []localeFunc, l *message.Language, log Logger) {
-	mods := filterImportFuncs(f.Imports, funs)
+func (ex *extracter) scanDirs(ctx context.Context, dirs []string) error {
+	wg := &sync.WaitGroup{}
+	for _, dir := range dirs {
+		entries, err := os.ReadDir(dir)
+		if err != nil {
+			return err
+		}
+
+		for _, e := range entries {
+			select {
+			case <-ctx.Done():
+				return context.Canceled
+			default:
+				name := strings.ToLower(e.Name())
+				if e.IsDir() || filepath.Ext(name) != ".go" || strings.HasSuffix(name, "_test.go") {
+					continue
+				}
+
+				wg.Add(1)
+				go func(p string) {
+					defer wg.Done()
+
+					f, err := parser.ParseFile(ex.fset, p, nil, parser.ParseComments)
+					if err != nil {
+						ex.log.Print(err)
+						return
+					}
+
+					ex.inspectFile(f)
+				}(filepath.Join(dir, e.Name()))
+			}
+		}
+	}
+	wg.Wait()
+
+	return nil
+}
+
+func (ex *extracter) inspectFile(f *ast.File) {
+	mods := filterImportFuncs(f.Imports, ex.funcs)
 	ast.Inspect(f, func(n ast.Node) bool {
 		switch expr := n.(type) {
 		case *ast.TypeSpec, *ast.ImportSpec:
 			return false
 		case *ast.CallExpr:
-			msg := inspect(fset, expr, mods, log)
+			msg := inspect(ex.fset, expr, mods, ex.log)
 			if msg.Key == "" {
 				return true
 			}
 
-			if sliceutil.Exists(l.Messages, func(m message.Message) bool { return m.Key == msg.Key }) {
-				p := fset.Position(expr.Pos())
+			ex.mux.Lock()
+			defer ex.mux.Unlock()
+
+			if sliceutil.Exists(ex.msg, func(m message.Message) bool { return m.Key == msg.Key }) {
+				p := ex.fset.Position(expr.Pos())
 				log.Printf("存在相同的本地化信息 %s，将被忽略，位于：%s:%d", msg.Key, p.Filename, p.Line)
 				return true
 			}
-			l.Messages = append(l.Messages, msg)
+			ex.msg = append(ex.msg, msg)
 			return false
 		}
 		return true
