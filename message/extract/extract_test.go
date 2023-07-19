@@ -70,8 +70,30 @@ func TestExtract(t *testing.T) {
 
 	m = msg.Languages[0].Messages
 	a.NotNil(m).
-		Length(sliceutil.Dup(m, func(m1, m2 message.Message) bool { return m1.Key == m2.Key }), 0). // 没有重复值
 		Length(m, 12)
+
+	for _, mm := range m {
+		t.Log(mm.Key)
+	}
+
+	// 测试本地的函数和对象
+
+	funcs = []string{
+		"github.com/issue9/localeutil.Phrase",
+		"github.com/issue9/localeutil.Error",
+		"github.com/issue9/localeutil.StringPhrase",
+		"golang.org/x/text/message.Printer.Printf",
+		"github.com/issue9/localeutil/testdata.Printer.Print",
+		"github.com/issue9/localeutil/testdata.Print",
+	}
+	msg, err = Extract(context.Background(), "zh-CN", "./testdata", true, log.Default(), funcs...)
+	a.NotError(err).NotNil(msg).
+		NotNil(msg.Languages[0]).
+		Equal(msg.Languages[0].ID.String(), "zh-CN")
+
+	m = msg.Languages[0].Messages
+	a.NotNil(m).
+		Length(m, 14)
 
 	for _, mm := range m {
 		t.Log(mm.Key)

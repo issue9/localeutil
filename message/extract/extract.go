@@ -16,6 +16,7 @@ import (
 	"sync"
 
 	"github.com/issue9/sliceutil"
+	"github.com/issue9/source"
 	"golang.org/x/text/language"
 
 	"github.com/issue9/localeutil/message"
@@ -112,7 +113,7 @@ func (ex *extracter) scanDirs(ctx context.Context, dirs []string) error {
 						return
 					}
 
-					ex.inspectFile(f)
+					ex.inspectFile(p, f)
 				}(filepath.Join(dir, e.Name()))
 			}
 		}
@@ -122,8 +123,14 @@ func (ex *extracter) scanDirs(ctx context.Context, dirs []string) error {
 	return nil
 }
 
-func (ex *extracter) inspectFile(f *ast.File) {
-	mods := filterImportFuncs(f.Imports, ex.funcs)
+func (ex *extracter) inspectFile(p string, f *ast.File) {
+	modPath, err := source.ModPath(p)
+	if err != nil {
+		ex.log.Print(err)
+		return
+	}
+
+	mods := filterImportFuncs(modPath, f.Imports, ex.funcs)
 	ast.Inspect(f, func(n ast.Node) bool {
 		switch expr := n.(type) {
 		case *ast.TypeSpec, *ast.ImportSpec:
@@ -151,31 +158,33 @@ func (ex *extracter) inspectFile(f *ast.File) {
 
 func (ex *extracter) inspect(expr *ast.CallExpr, mods []importFunc) message.Message {
 	msg := message.Message{}
+	var modName, structName, name string
 
-	f, ok := expr.Fun.(*ast.SelectorExpr)
-	if !ok {
-		return msg
-	}
-
-	var modName, structName string
-	switch ft := f.X.(type) {
-	case *ast.CallExpr: // localeutil.Phrase(xxx).LocaleString(p)
-		return ex.inspect(ft, mods)
-	case *ast.Ident:
-		if ft.Obj != nil { // 指向对象变量
-			modName, structName = ex.getObjectName(ft.Obj, ft.Name)
-		} else {
-			modName = ft.Name
+	switch f := expr.Fun.(type) {
+	case *ast.SelectorExpr:
+		switch ft := f.X.(type) {
+		case *ast.CallExpr: // localeutil.Phrase(xxx).LocaleString(p)
+			return ex.inspect(ft, mods)
+		case *ast.Ident:
+			if ft.Obj != nil {
+				modName, structName = ex.getObjectName(ft.Obj)
+			} else {
+				modName = ft.Name
+			}
+			name = f.Sel.Name
+		default:
+			return msg
 		}
-	default:
-		return msg
+	case *ast.Ident:
+		name = f.Name
 	}
 
 	exists := sliceutil.Exists(mods, func(m importFunc) bool {
-		ok := modName == m.modName && m.name == f.Sel.Name
+		ok := m.name == name && modName == m.modName
 		if structName != "" {
 			ok = ok && structName == m.structName
 		}
+
 		return ok
 	})
 	if !exists {
@@ -206,7 +215,7 @@ func (ex *extracter) inspect(expr *ast.CallExpr, mods []importFunc) message.Mess
 	return msg
 }
 
-func (ex *extracter) getObjectName(obj *ast.Object, varName string) (modName, structName string) {
+func (ex *extracter) getObjectName(obj *ast.Object) (modName, structName string) {
 	switch decl := obj.Decl.(type) {
 	case *ast.AssignStmt:
 		p := ex.fset.Position(decl.Pos())
@@ -232,7 +241,7 @@ func getExprNames(expr ast.Expr, log Logger) (modName, structName string) {
 	case *ast.SelectorExpr:
 		return s.X.(*ast.Ident).Name, s.Sel.Name
 	case *ast.Ident:
-		return "TODO", s.Name
+		return "", s.Name
 	case *ast.StarExpr:
 		return getExprNames(s.X, log)
 	default:

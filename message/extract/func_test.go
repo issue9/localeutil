@@ -32,11 +32,11 @@ func TestFilterImportFuncs(t *testing.T) {
 		a.NotError(err).NotNil(f)
 
 		fns := split("github.com/issue9/localeutil.Phrase", "github.com/issue9/localeutil.Error")
-		mods := filterImportFuncs(f.Imports, fns)
+		mods := filterImportFuncs("", f.Imports, fns)
 		a.Equal(mods, []importFunc{
 			{modName: "localeutil", name: "Phrase"},
-			{modName: "localeutil", name: "Error"},
 			{modName: "l", name: "Phrase"},
+			{modName: "localeutil", name: "Error"},
 			{modName: "l", name: "Error"},
 		})
 	})
@@ -47,7 +47,7 @@ func TestFilterImportFuncs(t *testing.T) {
 		a.NotError(err).NotNil(f)
 
 		fns := split("github.com/issue9/localeutil.Phrase")
-		mods := filterImportFuncs(f.Imports, fns)
+		mods := filterImportFuncs("", f.Imports, fns)
 		a.Equal(mods, []importFunc{
 			{modName: "localeutil", name: "Phrase"},
 			{modName: "l", name: "Phrase"},
@@ -60,10 +60,22 @@ func TestFilterImportFuncs(t *testing.T) {
 		a.NotError(err).NotNil(f)
 
 		fns := split("golang.org/x/text/message.Printer.Printf")
-		mods := filterImportFuncs(f.Imports, fns)
+		mods := filterImportFuncs("", f.Imports, fns)
 		a.Equal(mods, []importFunc{
 			{modName: "message", name: "Printf", structName: "Printer"},
 			{modName: "xm", name: "Printf", structName: "Printer"},
+		})
+	})
+
+	t.Run("file mod path", func(t *testing.T) {
+		a := assert.New(t, false)
+		f, err := parser.ParseFile(token.NewFileSet(), "./testdata/struct.go", nil, parser.AllErrors)
+		a.NotError(err).NotNil(f)
+
+		fns := split("golang.org/x/text/message.Printer.Printf")
+		mods := filterImportFuncs("golang.org/x/text/message", f.Imports, fns)
+		a.Equal(mods, []importFunc{
+			{name: "Printf", structName: "Printer"},
 		})
 	})
 }

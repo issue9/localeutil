@@ -40,26 +40,29 @@ func split(funcs ...string) []localeFunc {
 	return ret
 }
 
-func filterImportFuncs(imports []*ast.ImportSpec, funcs []localeFunc) []importFunc {
+func filterImportFuncs(fileModPath string, imports []*ast.ImportSpec, funcs []localeFunc) []importFunc {
 	mods := make([]importFunc, 0, len(funcs))
 
-	for _, ip := range imports {
-		var modName string
-		if ip.Name != nil && ip.Name.Name != "" {
-			modName = ip.Name.Name
-		} else {
-			modName = path.Base(strings.Trim(ip.Path.Value, "\""))
+	for _, f := range funcs {
+		if fileModPath == f.path {
+			mods = append(mods, importFunc{name: f.name, structName: f.structure})
+			continue
 		}
 
-		modPath := strings.Trim(ip.Path.Value, "\"")
-
-		for _, f := range funcs {
+		for _, ip := range imports {
+			modPath := strings.Trim(ip.Path.Value, "\"")
 			if f.path != modPath {
 				continue
 			}
 
-			mods = append(mods, importFunc{modName: modName, name: f.name, structName: f.structure})
+			var modName string
+			if ip.Name != nil && ip.Name.Name != "" {
+				modName = ip.Name.Name
+			} else {
+				modName = path.Base(modPath)
+			}
 
+			mods = append(mods, importFunc{modName: modName, name: f.name, structName: f.structure})
 		}
 	}
 
