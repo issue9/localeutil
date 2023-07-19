@@ -42,7 +42,7 @@ type extracter struct {
 // root 需要提取本地化内容的源码目录；
 // f 表示被用于本地化的函数，所有 f 指定的函数，其参数都将被提取为本地化的内容。
 // f 每个元素的格式为 mod/path.func，mod/path 为包的导出路径，func 为函数名。
-// f 的函数签名应该始终与 [localeutil.Phrase] 相同；
+// f 至少需要一个参数，且其第一个参数的类型必须为 string；
 func Extract(ctx context.Context, lang, root string, r bool, log Logger, f ...string) (*message.Messages, error) {
 	// NOTE: 有可能存在将 localeutil.Phrase 二次封装的情况，
 	// 为了尽可能多地找到本地化字符串，所以采用用户指定函数的方法。
@@ -167,7 +167,7 @@ func inspect(fset *token.FileSet, expr *ast.CallExpr, mods []importFunc, log Log
 	switch v := expr.Args[0].(type) {
 	case *ast.BasicLit:
 		key = v.Value
-	case *ast.Ident: // 常量/变量
+	case *ast.Ident: // const / var
 		switch d := v.Obj.Decl.(type) {
 		case *ast.ValueSpec:
 			if d.Names != nil && d.Names[0].Obj.Kind == ast.Con {

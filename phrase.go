@@ -17,7 +17,9 @@ type (
 	}
 
 	phrase struct {
-		key    Key
+		// NOTE: key 只能是字符串，如果要改为 [message.Reference]
+		// 那么 message/extract 也要支持 [message.Key] 返回的所有类型。
+		key    string
 		values []any
 	}
 
@@ -28,7 +30,6 @@ type (
 	// 与 [Phrase] 不同，StringPhrase 可以是常量，且大部分情况下适用。
 	StringPhrase string
 
-	Key     = message.Reference
 	Printer = message.Printer
 )
 
@@ -36,14 +37,19 @@ type (
 //
 // key 和 val 参数与 [Printer.Sprintf] 的参数相同。
 // 如果 val 也实现了 [LocaleStringer] 接口，则会先调用 val 的 LocaleString 方法。
-func Phrase(key Key, val ...any) LocaleStringer {
+//
+// 如果 val 为空，将返回 StringPhrase(key)。
+func Phrase(key string, val ...any) LocaleStringer {
+	if len(val) == 0 {
+		return StringPhrase(key)
+	}
 	return phrase{key: key, values: val}
 }
 
 // Error 返回未翻译的错误对象
 //
 // 该对象同时实现了 [LocaleStringer] 接口。
-func Error(key Key, val ...any) error {
+func Error(key string, val ...any) error {
 	return &localeError{key: key, values: val}
 }
 
