@@ -3,6 +3,7 @@
 package extract
 
 import (
+	"fmt"
 	"go/ast"
 	"path"
 	"strings"
@@ -10,21 +11,30 @@ import (
 
 // 表示本地化的函数
 type localeFunc struct {
-	path string // 函数的完整导入路径
-	name string // 函数名
+	path      string // 函数的完整导入路径
+	structure string // 类型名，可能为空
+	name      string // 函数名
 }
 
 // 表示由 import 转换后的函数名
 type importFunc struct {
-	modName string // import 中的别名
-	name    string // 函数名
+	modName    string // import 中的别名
+	structName string // 类型名，可能为空
+	name       string // 函数名
 }
 
 func split(funcs ...string) []localeFunc {
 	ret := make([]localeFunc, 0, len(funcs))
 	for _, f := range funcs {
-		if index := strings.LastIndexByte(f, '.'); index > 0 {
-			ret = append(ret, localeFunc{path: f[:index], name: f[index+1:]})
+		base := path.Base(f)
+		dir := path.Dir(f)
+		switch strs := strings.Split(base, "."); len(strs) {
+		case 2:
+			ret = append(ret, localeFunc{path: path.Join(dir, strs[0]), name: strs[1]})
+		case 3:
+			ret = append(ret, localeFunc{path: path.Join(dir, strs[0]), structure: strs[1], name: strs[2]})
+		default:
+			panic(fmt.Sprintf("%s 格式无效", f))
 		}
 	}
 	return ret
@@ -48,7 +58,7 @@ func filterImportFuncs(imports []*ast.ImportSpec, funcs []localeFunc) []importFu
 				continue
 			}
 
-			mods = append(mods, importFunc{modName: modName, name: f.name})
+			mods = append(mods, importFunc{modName: modName, name: f.name, structName: f.structure})
 
 		}
 	}

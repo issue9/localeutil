@@ -41,8 +41,19 @@ type extracter struct {
 // lang 代码的文本所使用的语言；
 // root 需要提取本地化内容的源码目录；
 // f 表示被用于本地化的函数，所有 f 指定的函数，其参数都将被提取为本地化的内容。
-// f 每个元素的格式为 mod/path.func，mod/path 为包的导出路径，func 为函数名。
-// f 至少需要一个参数，且其第一个参数的类型必须为 string；
+// f 每个元素的格式为 mod/path[.struct].func，mod/path 为包的导出路径，
+// struct 为结构体名称，可以省略，func 为函数或方法名。
+// f 至少需要一个参数，且其第一个参数的类型必须为 string。
+// 如果 f 指向的是方法，那么在调用此方法的结构必须有明确类型声明，不能由类型推荐获得。
+// 比如，当 f 为 golang.org/x/text/message.Printer.Printf 时：
+//
+//	// 以下无法提取内容
+//	p := message.NewPrinter();
+//	p.Printf(...)
+//
+//	// 以下可以
+//	var p *message.Printer = message.NewPrinter();
+//	p.Printf(...)
 func Extract(ctx context.Context, lang, root string, r bool, log Logger, f ...string) (*message.Messages, error) {
 	// NOTE: 有可能存在将 localeutil.Phrase 二次封装的情况，
 	// 为了尽可能多地找到本地化字符串，所以采用用户指定函数的方法。
@@ -118,7 +129,7 @@ func (ex *extracter) inspectFile(f *ast.File) {
 		case *ast.TypeSpec, *ast.ImportSpec:
 			return false
 		case *ast.CallExpr:
-			msg := inspect(ex.fset, expr, mods, ex.log)
+			msg := ex.inspect(expr, mods)
 			if msg.Key == "" {
 				return true
 			}
@@ -138,7 +149,7 @@ func (ex *extracter) inspectFile(f *ast.File) {
 	})
 }
 
-func inspect(fset *token.FileSet, expr *ast.CallExpr, mods []importFunc, log Logger) message.Message {
+func (ex *extracter) inspect(expr *ast.CallExpr, mods []importFunc) message.Message {
 	msg := message.Message{}
 
 	f, ok := expr.Fun.(*ast.SelectorExpr)
@@ -146,18 +157,26 @@ func inspect(fset *token.FileSet, expr *ast.CallExpr, mods []importFunc, log Log
 		return msg
 	}
 
-	var xName string
+	var modName, structName string
 	switch ft := f.X.(type) {
 	case *ast.CallExpr: // localeutil.Phrase(xxx).LocaleString(p)
-		return inspect(fset, ft, mods, log)
+		return ex.inspect(ft, mods)
 	case *ast.Ident:
-		xName = ft.Name
+		if ft.Obj != nil { // 指向对象变量
+			modName, structName = ex.getObjectName(ft.Obj, ft.Name)
+		} else {
+			modName = ft.Name
+		}
 	default:
 		return msg
 	}
 
 	exists := sliceutil.Exists(mods, func(m importFunc) bool {
-		return xName == m.modName && m.name == f.Sel.Name
+		ok := modName == m.modName && m.name == f.Sel.Name
+		if structName != "" {
+			ok = ok && structName == m.structName
+		}
+		return ok
 	})
 	if !exists {
 		return msg
@@ -185,4 +204,39 @@ func inspect(fset *token.FileSet, expr *ast.CallExpr, mods []importFunc, log Log
 	msg.Key = key
 	msg.Message.Msg = key
 	return msg
+}
+
+func (ex *extracter) getObjectName(obj *ast.Object, varName string) (modName, structName string) {
+	switch decl := obj.Decl.(type) {
+	case *ast.AssignStmt:
+		p := ex.fset.Position(decl.Pos())
+		log.Printf("不支持类型推导，必须明确类型:%s:%d", p.Filename, p.Line)
+		return "", ""
+	case *ast.ValueSpec: // 局部变量/全局变量
+		if decl.Type == nil {
+			p := ex.fset.Position(decl.Pos())
+			log.Printf("不支持类型推导，必须明确类型:%s:%d", p.Filename, p.Line)
+			return
+		}
+		return getExprNames(decl.Type, ex.log)
+	case *ast.Field: // 函数参数
+		return getExprNames(decl.Type, ex.log)
+	default:
+		log.Printf("未处理的 obj.Decl 类型 %T", decl)
+		return "", ""
+	}
+}
+
+func getExprNames(expr ast.Expr, log Logger) (modName, structName string) {
+	switch s := expr.(type) {
+	case *ast.SelectorExpr:
+		return s.X.(*ast.Ident).Name, s.Sel.Name
+	case *ast.Ident:
+		return "TODO", s.Name
+	case *ast.StarExpr:
+		return getExprNames(s.X, log)
+	default:
+		log.Printf("getExprNames 未处理的类型 %T", s)
+		return "", ""
+	}
 }
