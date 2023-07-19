@@ -8,6 +8,10 @@ import (
 	"github.com/issue9/localeutil"
 )
 
+const c1 = localeutil.StringPhrase("c1")
+
+var c2 = localeutil.StringPhrase("c2")
+
 var (
 	_ = localeutil.Phrase("p1")
 	_ = localeutil.Phrase("p1") // 同值，应该忽略

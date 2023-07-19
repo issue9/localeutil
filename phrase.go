@@ -23,13 +23,18 @@ type (
 
 	localeError phrase
 
+	// StringPhrase 由字符串组成的 [LocaleStringer] 实现
+	//
+	// 与 [Phrase] 不同，StringPhrase 可以是常量，且大部分情况下适用。
+	StringPhrase string
+
 	Key     = message.Reference
 	Printer = message.Printer
 )
 
 // Phrase 返回一段未翻译的语言片段
 //
-// key 和 val 参数与 [message.Printer.Sprintf] 的参数相同。
+// key 和 val 参数与 [Printer.Sprintf] 的参数相同。
 // 如果 val 也实现了 [LocaleStringer] 接口，则会先调用 val 的 LocaleString 方法。
 func Phrase(key Key, val ...any) LocaleStringer {
 	return phrase{key: key, values: val}
@@ -61,3 +66,7 @@ func (err *localeError) Error() string { return err.LocaleString(defaultPrinter)
 func (err *localeError) LocaleString(p *Printer) string {
 	return phrase(*err).LocaleString(p)
 }
+
+func (sp StringPhrase) LocaleString(p *Printer) string { return p.Sprintf(string(sp)) }
+
+func (sp StringPhrase) String() string { return sp.LocaleString(defaultPrinter) }

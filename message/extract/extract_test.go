@@ -33,7 +33,7 @@ func TestExtract(t *testing.T) {
 
 	// 添加了 localeutil.Error
 
-	msg, err = Extract(context.Background(), "zh-CN", "./testdata", true, log.Default(), "github.com/issue9/localeutil.Phrase", "github.com/issue9/localeutil.Error")
+	msg, err = Extract(context.Background(), "zh-CN", "./testdata", true, log.Default(), "github.com/issue9/localeutil.Phrase", "github.com/issue9/localeutil.Error", "github.com/issue9/localeutil.StringPhrase")
 	a.NotError(err).NotNil(msg).
 		NotNil(msg.Languages[0]).
 		Equal(msg.Languages[0].ID.String(), "zh-CN")
@@ -41,7 +41,7 @@ func TestExtract(t *testing.T) {
 	m = msg.Languages[0].Messages
 	a.NotNil(m).
 		Length(sliceutil.Dup(m, func(m1, m2 message.Message) bool { return m1.Key == m2.Key }), 0). // 没有重复值
-		Length(m, 8)
+		Length(m, 10)
 
 	for _, mm := range m {
 		t.Log(mm.Key)

@@ -15,6 +15,7 @@ import (
 var (
 	_ LocaleStringer = phrase{}
 	_ LocaleStringer = &phrase{}
+	_ LocaleStringer = StringPhrase("123")
 
 	_ error          = &localeError{}
 	_ LocaleStringer = &localeError{}
@@ -40,6 +41,13 @@ func TestLocaleStringer(t *testing.T) {
 
 	p = Phrase("not-exists")
 	a.Equal(p.LocaleString(twp), "not-exists")
+
+	p = StringPhrase("not-exists")
+	a.Equal(p.LocaleString(twp), "not-exists")
+
+	p = StringPhrase("k1")
+	a.Equal(p.LocaleString(cnp), "cn")
+	a.Equal(p.LocaleString(twp), "tw")
 }
 
 func TestError(t *testing.T) {
