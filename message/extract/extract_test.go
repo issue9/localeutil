@@ -16,10 +16,14 @@ import (
 func TestExtract(t *testing.T) {
 	a := assert.New(t, false)
 
-	funcs := []string{
-		"github.com/issue9/localeutil.Phrase",
+	o := &Options{
+		Language:  "zh-CN",
+		Root:      "./testdata",
+		Recursive: true,
+		Log:       log.Default(),
+		Funcs:     []string{"github.com/issue9/localeutil.Phrase"},
 	}
-	msg, err := Extract(context.Background(), "zh-CN", "./testdata", true, log.Default(), funcs...)
+	msg, err := Extract(context.Background(), o)
 	a.NotError(err).NotNil(msg).
 		NotNil(msg.Languages[0]).
 		Equal(msg.Languages[0].ID.String(), "zh-CN")
@@ -36,12 +40,18 @@ func TestExtract(t *testing.T) {
 
 	// 添加了 localeutil.Error 和 localeutil.StringPhrase
 
-	funcs = []string{
-		"github.com/issue9/localeutil.Phrase",
-		"github.com/issue9/localeutil.Error",
-		"github.com/issue9/localeutil.StringPhrase",
+	o = &Options{
+		Language:  "zh-CN",
+		Root:      "./testdata",
+		Recursive: true,
+		Log:       log.Default(),
+		Funcs: []string{
+			"github.com/issue9/localeutil.Phrase",
+			"github.com/issue9/localeutil.Error",
+			"github.com/issue9/localeutil.StringPhrase",
+		},
 	}
-	msg, err = Extract(context.Background(), "zh-CN", "./testdata", true, log.Default(), funcs...)
+	msg, err = Extract(context.Background(), o)
 	a.NotError(err).NotNil(msg).
 		NotNil(msg.Languages[0]).
 		Equal(msg.Languages[0].ID.String(), "zh-CN")
@@ -57,13 +67,19 @@ func TestExtract(t *testing.T) {
 
 	// 添加了 text/message.Printer.Printf
 
-	funcs = []string{
-		"github.com/issue9/localeutil.Phrase",
-		"github.com/issue9/localeutil.Error",
-		"github.com/issue9/localeutil.StringPhrase",
-		"golang.org/x/text/message.Printer.Printf",
+	o = &Options{
+		Language:  "zh-CN",
+		Root:      "./testdata",
+		Recursive: true,
+		Log:       log.Default(),
+		Funcs: []string{
+			"github.com/issue9/localeutil.Phrase",
+			"github.com/issue9/localeutil.Error",
+			"github.com/issue9/localeutil.StringPhrase",
+			"golang.org/x/text/message.Printer.Printf",
+		},
 	}
-	msg, err = Extract(context.Background(), "zh-CN", "./testdata", true, log.Default(), funcs...)
+	msg, err = Extract(context.Background(), o)
 	a.NotError(err).NotNil(msg).
 		NotNil(msg.Languages[0]).
 		Equal(msg.Languages[0].ID.String(), "zh-CN")
@@ -78,15 +94,21 @@ func TestExtract(t *testing.T) {
 
 	// 测试本地的函数和对象
 
-	funcs = []string{
-		"github.com/issue9/localeutil.Phrase",
-		"github.com/issue9/localeutil.Error",
-		"github.com/issue9/localeutil.StringPhrase",
-		"golang.org/x/text/message.Printer.Printf",
-		"github.com/issue9/localeutil/testdata.Printer.Print",
-		"github.com/issue9/localeutil/testdata.Print",
+	o = &Options{
+		Language:  "zh-CN",
+		Root:      "./testdata",
+		Recursive: true,
+		Log:       log.Default(),
+		Funcs: []string{
+			"github.com/issue9/localeutil.Phrase",
+			"github.com/issue9/localeutil.Error",
+			"github.com/issue9/localeutil.StringPhrase",
+			"golang.org/x/text/message.Printer.Printf",
+			"github.com/issue9/localeutil/testdata.Printer.Print",
+			"github.com/issue9/localeutil/testdata.Print",
+		},
 	}
-	msg, err = Extract(context.Background(), "zh-CN", "./testdata", true, log.Default(), funcs...)
+	msg, err = Extract(context.Background(), o)
 	a.NotError(err).NotNil(msg).
 		NotNil(msg.Languages[0]).
 		Equal(msg.Languages[0].ID.String(), "zh-CN")

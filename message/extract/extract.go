@@ -5,6 +5,7 @@ package extract
 
 import (
 	"context"
+	"errors"
 	"go/ast"
 	"go/parser"
 	"go/token"
@@ -28,6 +29,40 @@ type Logger interface {
 	Printf(string, ...any)
 }
 
+type Options struct {
+	// Language 提取内容的语言 ID
+	Language string
+
+	// 读取的根目录
+	//
+	// 需要位于一个 Go 的模块中。
+	Root string
+
+	// 是否读取子目录的内容
+	Recursive bool
+
+	// 日志输出通道
+	Log Logger
+
+	// 用于输出本地化内容的函数列表
+	//
+	// 每个元素的格式为 mod/path[.struct].func，mod/path 为包的导出路径，
+	// struct 为结构体名称，可以省略，func 为函数或方法名。
+	//
+	// 函数至少需要一个参数，且其第一个参数的类型必须为 string。
+	// 如果指向的是方法，那么在调用此方法的结构必须有明确类型声明，不能由类型推荐获得。
+	// 比如，当 f 为 golang.org/x/text/message.Printer.Printf 时：
+	//
+	//	// 以下无法提取内容
+	//	p := message.NewPrinter();
+	//	p.Printf(...)
+	//
+	//	// 以下可以
+	//	var p *message.Printer = message.NewPrinter();
+	//	p.Printf(...)
+	Funcs []string
+}
+
 type extracter struct {
 	log   Logger
 	funcs []localeFunc
@@ -38,35 +73,18 @@ type extracter struct {
 }
 
 // Extract 提取本地化内容
-//
-// lang 代码的文本所使用的语言；
-// root 需要提取本地化内容的源码目录；
-// f 表示被用于本地化的函数，所有 f 指定的函数，其参数都将被提取为本地化的内容。
-// f 每个元素的格式为 mod/path[.struct].func，mod/path 为包的导出路径，
-// struct 为结构体名称，可以省略，func 为函数或方法名。
-// f 至少需要一个参数，且其第一个参数的类型必须为 string。
-// 如果 f 指向的是方法，那么在调用此方法的结构必须有明确类型声明，不能由类型推荐获得。
-// 比如，当 f 为 golang.org/x/text/message.Printer.Printf 时：
-//
-//	// 以下无法提取内容
-//	p := message.NewPrinter();
-//	p.Printf(...)
-//
-//	// 以下可以
-//	var p *message.Printer = message.NewPrinter();
-//	p.Printf(...)
-func Extract(ctx context.Context, lang, root string, r bool, log Logger, f ...string) (*message.Messages, error) {
+func Extract(ctx context.Context, o *Options) (*message.Messages, error) {
 	// NOTE: 有可能存在将 localeutil.Phrase 二次封装的情况，
 	// 为了尽可能多地找到本地化字符串，所以采用用户指定函数的方法。
 
-	dirs, err := getDir(root, r)
+	dirs, err := getDir(o.Root, o.Recursive)
 	if err != nil {
 		return nil, err
 	}
 
 	ex := &extracter{
-		log:   log,
-		funcs: split(f...),
+		log:   o.Log,
+		funcs: split(o.Funcs...),
 		fset:  token.NewFileSet(),
 
 		msg: make([]message.Message, 0, 100),
@@ -80,7 +98,7 @@ func Extract(ctx context.Context, lang, root string, r bool, log Logger, f ...st
 
 	return &message.Messages{
 		Languages: []*message.Language{
-			{ID: language.MustParse(lang), Messages: ex.msg},
+			{ID: language.MustParse(o.Language), Messages: ex.msg},
 		},
 	}, nil
 }
@@ -125,7 +143,11 @@ func (ex *extracter) scanDirs(ctx context.Context, dirs []string) error {
 
 func (ex *extracter) inspectFile(p string, f *ast.File) {
 	modPath, err := source.ModPath(p)
-	if err != nil {
+	switch {
+	case errors.Is(err, os.ErrNotExist):
+		ex.log.Printf("必须是在一个模块中，当前无法找到 go.mod 文件")
+		return
+	case err != nil:
 		ex.log.Print(err)
 		return
 	}
