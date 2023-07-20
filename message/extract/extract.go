@@ -218,12 +218,9 @@ func (ex *extracter) inspect(expr *ast.CallExpr, mods []importFunc) message.Mess
 func (ex *extracter) getObjectName(obj *ast.Object) (modName, structName string) {
 	switch decl := obj.Decl.(type) {
 	case *ast.ValueSpec: // 局部变量/全局变量
-		if decl.Type == nil {
-			p := ex.fset.Position(decl.Pos())
-			log.Printf("不支持类型推导，必须明确类型:%s:%d", p.Filename, p.Line)
-			return
+		if decl.Type != nil {
+			return getExprNames(decl.Type, ex.log)
 		}
-		return getExprNames(decl.Type, ex.log)
 	case *ast.Field: // 函数参数
 		return getExprNames(decl.Type, ex.log)
 	}
