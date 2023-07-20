@@ -41,6 +41,11 @@ type Options struct {
 	// 是否读取子目录的内容
 	Recursive bool
 
+	// 忽略子模块
+	//
+	// 当 Recursive 为 true 时，此值为 true，可以不读取子模块的内容。
+	SkipSubModule bool
+
 	// 日志输出通道
 	Log Logger
 
@@ -77,7 +82,7 @@ func Extract(ctx context.Context, o *Options) (*message.Messages, error) {
 	// NOTE: 有可能存在将 localeutil.Phrase 二次封装的情况，
 	// 为了尽可能多地找到本地化字符串，所以采用用户指定函数的方法。
 
-	dirs, err := getDir(o.Root, o.Recursive)
+	dirs, err := getDir(o.Root, o.Recursive, o.SkipSubModule)
 	if err != nil {
 		return nil, err
 	}
