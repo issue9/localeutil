@@ -67,7 +67,7 @@ func (m *Messages) Load(data []byte, u UnmarshalFunc) error {
 	if err := u(data, msgs); err != nil {
 		return err
 	}
-	m.Merge(msgs)
+	m.Append(msgs)
 
 	return nil
 }
@@ -116,19 +116,19 @@ func (m *Messages) LoadFSGlob(fsys fs.FS, glob string, u UnmarshalFunc) error {
 	return nil
 }
 
-// Merge 将 m2 并入当前对象
-func (m *Messages) Merge(m2 *Messages) {
+// Append 将 m2 并入当前对象
+func (m *Messages) Append(m2 *Messages) {
 	for _, l := range m2.Languages {
 		ll, found := sliceutil.At(m.Languages, func(ll *Language) bool { return ll.ID == l.ID })
 		if found {
-			ll.merge(l)
+			ll.append(l)
 		} else {
 			m.Languages = append(m.Languages, l)
 		}
 	}
 }
 
-func (l *Language) merge(l2 *Language) {
+func (l *Language) append(l2 *Language) {
 	for _, msg2 := range l2.Messages {
 		if !sliceutil.Exists(l.Messages, func(msg Message) bool { return msg.Key == msg2.Key }) {
 			l.Messages = append(l.Messages, msg2)
