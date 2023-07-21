@@ -4,7 +4,13 @@ package message
 
 import "github.com/issue9/sliceutil"
 
-func mergeLanguage(src, dest *Language, log chan string) {
+// Logger 日志输出接口
+type Logger interface {
+	Print(...any)
+	Printf(string, ...any)
+}
+
+func mergeLanguage(src, dest *Language, log Logger) {
 	if src.ID != dest.ID {
 		return
 	}
@@ -13,7 +19,7 @@ func mergeLanguage(src, dest *Language, log chan string) {
 	dest.Messages = sliceutil.Delete(dest.Messages, func(dm Message) bool {
 		exist := sliceutil.Exists(src.Messages, func(sm Message) bool { return sm.Key == dm.Key })
 		if !exist {
-			log <- dm.Key
+			log.Printf("删除语言 %s 的翻译项 %s", src.ID.String(), dm.Key)
 		}
 		return !exist
 	})
@@ -33,12 +39,12 @@ func mergeLanguage(src, dest *Language, log chan string) {
 // - 将 src 独有的项写入 dest；
 // 最终内容是 dest 为准。
 // log 所有删除的记录都将通过此输出；
-func (m *Messages) Merge(src *Messages, log chan string) {
+func (m *Messages) Merge(src *Messages, log Logger) {
 	// 删除只存在于 m 而不存在于 src 的内容
 	m.Languages = sliceutil.Delete(m.Languages, func(dl *Language) bool {
 		exist := sliceutil.Exists(src.Languages, func(sl *Language) bool { return sl.ID == dl.ID })
 		if !exist {
-			log <- dl.ID.String()
+			log.Printf("删除语言 %s", dl.ID.String())
 		}
 		return !exist
 	})

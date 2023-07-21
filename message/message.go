@@ -67,7 +67,15 @@ func (m *Messages) Load(data []byte, u UnmarshalFunc) error {
 	if err := u(data, msgs); err != nil {
 		return err
 	}
-	m.Append(msgs)
+
+	for _, l := range msgs.Languages {
+		ll, found := sliceutil.At(m.Languages, func(ll *Language) bool { return ll.ID == l.ID })
+		if found {
+			ll.append(l)
+		} else {
+			m.Languages = append(m.Languages, l)
+		}
+	}
 
 	return nil
 }
@@ -114,20 +122,6 @@ func (m *Messages) LoadFSGlob(fsys fs.FS, glob string, u UnmarshalFunc) error {
 		}
 	}
 	return nil
-}
-
-// Append 将仅在于 m2 的内容加到 m
-//
-// 包含 [Messages.Languages] 和 [Language.Messages] 两级。
-func (m *Messages) Append(m2 *Messages) {
-	for _, l := range m2.Languages {
-		ll, found := sliceutil.At(m.Languages, func(ll *Language) bool { return ll.ID == l.ID })
-		if found {
-			ll.append(l)
-		} else {
-			m.Languages = append(m.Languages, l)
-		}
-	}
 }
 
 func (l *Language) append(l2 *Language) {

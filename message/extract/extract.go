@@ -23,15 +23,9 @@ import (
 	"github.com/issue9/localeutil/message"
 )
 
-// Logger 日志输出接口
-type Logger interface {
-	Print(...any)
-	Printf(string, ...any)
-}
-
 type Options struct {
 	// Language 提取内容的语言 ID
-	Language string
+	Language language.Tag
 
 	// 读取的根目录
 	//
@@ -47,7 +41,7 @@ type Options struct {
 	SkipSubModule bool
 
 	// 日志输出通道
-	Log Logger
+	Log message.Logger
 
 	// 用于输出本地化内容的函数列表
 	//
@@ -69,7 +63,7 @@ type Options struct {
 }
 
 type extracter struct {
-	log   Logger
+	log   message.Logger
 	funcs []localeFunc
 	fset  *token.FileSet
 
@@ -78,7 +72,7 @@ type extracter struct {
 }
 
 // Extract 提取本地化内容
-func Extract(ctx context.Context, o *Options) (*message.Messages, error) {
+func Extract(ctx context.Context, o *Options) (*message.Language, error) {
 	// NOTE: 有可能存在将 localeutil.Phrase 二次封装的情况，
 	// 为了尽可能多地找到本地化字符串，所以采用用户指定函数的方法。
 
@@ -101,11 +95,7 @@ func Extract(ctx context.Context, o *Options) (*message.Messages, error) {
 
 	sort.SliceStable(ex.msg, func(i, j int) bool { return ex.msg[i].Key < ex.msg[j].Key })
 
-	return &message.Messages{
-		Languages: []*message.Language{
-			{ID: language.MustParse(o.Language), Messages: ex.msg},
-		},
-	}, nil
+	return &message.Language{ID: o.Language, Messages: ex.msg}, nil
 }
 
 func (ex *extracter) scanDirs(ctx context.Context, dirs []string) error {
@@ -254,7 +244,7 @@ func (ex *extracter) getObjectName(obj *ast.Object) (modName, structName string)
 	return "", ""
 }
 
-func getExprNames(expr ast.Expr, log Logger) (modName, structName string) {
+func getExprNames(expr ast.Expr, log message.Logger) (modName, structName string) {
 	switch s := expr.(type) {
 	case *ast.SelectorExpr:
 		return s.X.(*ast.Ident).Name, s.Sel.Name
