@@ -116,7 +116,9 @@ func (m *Messages) LoadFSGlob(fsys fs.FS, glob string, u UnmarshalFunc) error {
 	return nil
 }
 
-// Append 将 m2 并入当前对象
+// Append 将仅在于 m2 的内容加到 m
+//
+// 包含 [Messages.Languages] 和 [Language.Messages] 两级。
 func (m *Messages) Append(m2 *Messages) {
 	for _, l := range m2.Languages {
 		ll, found := sliceutil.At(m.Languages, func(ll *Language) bool { return ll.ID == l.ID })
@@ -140,6 +142,8 @@ func (l *Language) append(l2 *Language) {
 func (m *Messages) Bytes(f MarshalFunc) ([]byte, error) { return f(m) }
 
 // SaveFile 将当前对象编码为文本并存入 path
+//
+// 如果文件已经存在会被覆盖。
 func (m *Messages) SaveFile(path string, f MarshalFunc, mode fs.FileMode) error {
 	data, err := m.Bytes(f)
 	if err == nil {
