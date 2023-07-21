@@ -22,7 +22,7 @@ func getDir(root string, r, skip bool) ([]string, error) {
 			return nil
 		}
 
-		if skip {
+		if skip && root != p {
 			stat, err := os.Stat(filepath.Join(p, "go.mod"))
 			if err == nil && !stat.IsDir() {
 				return fs.SkipDir
