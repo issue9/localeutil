@@ -1,31 +1,19 @@
 // SPDX-License-Identifier: MIT
 
-// Package message 本地化的语言文件处理
+// Package message 本地化信息的定义
 package message
 
 import (
-	"io/fs"
-	"os"
-	"path/filepath"
-
 	"github.com/issue9/sliceutil"
+	"golang.org/x/text/feature/plural"
 	"golang.org/x/text/language"
+	"golang.org/x/text/message/catalog"
 )
 
 type (
-	// UnmarshalFunc 解析文本内容至对象的方法
-	UnmarshalFunc = func([]byte, any) error
-
-	MarshalFunc = func(any) ([]byte, error)
-
-	// Messages 本地化对象
-	Messages struct {
-		XMLName   struct{}    `xml:"messages" json:"-" yaml:"-"`
-		Languages []*Language `xml:"language" json:"languages" yaml:"languages"`
-	}
-
 	// Language 某一语言的本地化内容
 	Language struct {
+		XMLName  struct{}     `xml:"language" json:"-" yaml:"-"`
 		ID       language.Tag `xml:"id,attr" json:"id" yaml:"id"`
 		Messages []Message    `xml:"message" json:"messages" yaml:"messages"`
 	}
@@ -61,103 +49,86 @@ type (
 	}
 )
 
-// Load 加载内容
-func (m *Messages) Load(data []byte, u UnmarshalFunc) error {
-	msgs := &Messages{}
-	if err := u(data, msgs); err != nil {
-		return err
-	}
-
-	for _, l := range msgs.Languages {
-		ll, found := sliceutil.At(m.Languages, func(ll *Language) bool { return ll.ID == l.ID })
-		if found {
-			ll.append(l)
-		} else {
-			m.Languages = append(m.Languages, l)
-		}
-	}
-
-	return nil
-}
-
-func (m *Messages) LoadFile(path string, u UnmarshalFunc) error {
-	return m.unmarshalFS(func() ([]byte, error) { return os.ReadFile(path) }, u)
-}
-
-func (m *Messages) LoadFS(fsys fs.FS, name string, u UnmarshalFunc) error {
-	return m.unmarshalFS(func() ([]byte, error) { return fs.ReadFile(fsys, name) }, u)
-}
-
-func (m *Messages) unmarshalFS(f func() ([]byte, error), u UnmarshalFunc) error {
-	data, err := f()
-	if err != nil {
-		return err
-	}
-	return m.Load(data, u)
-}
-
-func (m *Messages) LoadGlob(glob string, u UnmarshalFunc) error {
-	matches, err := filepath.Glob(glob)
-	if err != nil {
-		return err
-	}
-
-	for _, match := range matches {
-		if err := m.LoadFile(match, u); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (m *Messages) LoadFSGlob(fsys fs.FS, glob string, u UnmarshalFunc) error {
-	matches, err := fs.Glob(fsys, glob)
-	if err != nil {
-		return err
-	}
-
-	for _, match := range matches {
-		if err := m.LoadFS(fsys, match, u); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (l *Language) append(l2 *Language) {
-	for _, msg2 := range l2.Messages {
-		if !sliceutil.Exists(l.Messages, func(msg Message) bool { return msg.Key == msg2.Key }) {
-			l.Messages = append(l.Messages, msg2)
-		}
-	}
-}
-
-// Bytes 将当前对象转换为 []byte
-func (m *Messages) Bytes(f MarshalFunc) ([]byte, error) { return f(m) }
-
-// SaveFile 将当前对象编码为文本并存入 path
+// Join 将 l2.Messages 并入 l.Messages
 //
-// 如果文件已经存在会被覆盖。
-func (m *Messages) SaveFile(path string, f MarshalFunc, mode fs.FileMode) error {
-	data, err := m.Bytes(f)
-	if err == nil {
-		err = os.WriteFile(path, data, mode)
+// 如果 l2 的 [Message.Key] 存在于 l，则覆盖 l 的项；
+// 如果 l2 的 [Message.Key] 不存在于 l，则写入 l；
+func (l *Language) Join(l2 *Language) {
+	for index, m2 := range l2.Messages {
+		elem, found := sliceutil.At(l.Messages, func(m1 Message, _ int) bool { return m1.Key == m2.Key })
+		if !found {
+			l.Messages = append(l.Messages, m2)
+		} else {
+			l2.Messages[index] = elem
+		}
 	}
-	return err
 }
 
-// SaveFiles 将当前对象按语言 ID 分类保存
-func (m *Messages) SaveFiles(dir, ext string, f MarshalFunc, mode fs.FileMode) error {
-	if ext[0] != '.' {
-		ext = "." + ext
-	}
+type MergeLogFunc func(tag language.Tag, key string)
 
-	for _, l := range m.Languages {
-		msg := &Messages{Languages: []*Language{l}}
-		path := filepath.Join(dir, l.ID.String()+ext)
-		if err := msg.SaveFile(path, f, mode); err != nil {
+// Merge 将 l 并入 src
+//
+// 这将会执行以下几个步骤：
+// - 删除只存在于 dest 而不存在于 l 的内容；
+// - 将 l 独有的项写入 dest；
+// 最终内容是 dest 为准。
+// log 所有删除的记录都将通过此输出；
+func (l *Language) MergeTo(log MergeLogFunc, dest []*Language) {
+	for _, d := range dest {
+		l.mergeTo(log, d)
+	}
+}
+
+func (l *Language) mergeTo(log MergeLogFunc, dest *Language) {
+	// 删除只存在于 dest 而不存在于 l 的内容
+	dest.Messages = sliceutil.Delete(dest.Messages, func(dm Message, _ int) bool {
+		exist := sliceutil.Exists(l.Messages, func(sm Message, _ int) bool { return sm.Key == dm.Key })
+		if !exist {
+			log(dest.ID, dm.Key)
+		}
+		return !exist
+	})
+
+	// 将 l 独有的项写入 dest
+	for _, sm := range l.Messages {
+		if !sliceutil.Exists(dest.Messages, func(dm Message, _ int) bool { return dm.Key == sm.Key }) {
+			dest.Messages = append(dest.Messages, sm)
+		}
+	}
+}
+
+// Catalog 将本地化信息附加在 [catalog.Catalog] 上
+func (l *Language) Catalog(b *catalog.Builder) (err error) {
+	for _, msg := range l.Messages {
+		switch {
+		case msg.Message.Vars != nil:
+			vars := msg.Message.Vars
+			msgs := make([]catalog.Message, 0, len(vars))
+			for _, v := range vars {
+				mm := catalog.Var(v.Name, plural.Selectf(v.Arg, v.Format, ex(v.Cases)...))
+				msgs = append(msgs, mm)
+			}
+			msgs = append(msgs, catalog.String(msg.Message.Msg))
+			err = b.Set(l.ID, msg.Key, msgs...)
+		case msg.Message.Select != nil:
+			s := msg.Message.Select
+			err = b.Set(l.ID, msg.Key, plural.Selectf(s.Arg, s.Format, ex(s.Cases)...))
+		case msg.Message.Msg != "":
+			err = b.SetString(l.ID, msg.Key, msg.Message.Msg)
+		}
+
+		if err != nil {
 			return err
 		}
 	}
+
 	return nil
+}
+
+func ex(cases []*Case) []any {
+	data := make([]any, 0, len(cases)*2)
+	for _, c := range cases {
+		data = append(data, c.Case, c.Value)
+	}
+	return data
 }

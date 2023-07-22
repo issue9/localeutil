@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-package message
+package serialize
 
 import (
 	"encoding/json"
@@ -14,14 +14,14 @@ import (
 	"golang.org/x/text/message/catalog"
 )
 
-func TestMessages_Catalog(t *testing.T) {
+func TestCatalog(t *testing.T) {
 	t.Run("xml", func(t *testing.T) {
 		a := assert.New(t, false)
 		b := catalog.NewBuilder()
-		m := &Messages{}
 
-		a.NotError(m.LoadFS(os.DirFS("./testdata"), "cmn-hant.xml", xml.Unmarshal))
-		m.Catalog(b)
+		l, err := LoadFS(os.DirFS("./testdata"), "cmn-hant.xml", xml.Unmarshal)
+		a.NotError(err).NotNil(l)
+		l.Catalog(b)
 		hant := message.NewPrinter(language.MustParse("cmn-hant"), message.Catalog(b))
 
 		a.Equal(hant.Sprintf("k1"), "msg1")
@@ -42,10 +42,12 @@ func TestMessages_Catalog(t *testing.T) {
 	t.Run("json", func(t *testing.T) {
 		a := assert.New(t, false)
 		b := catalog.NewBuilder()
-		m := &Messages{}
 
-		a.NotError(m.LoadGlob("./testdata/*.json", json.Unmarshal))
-		m.Catalog(b)
+		ls, err := LoadGlob("./testdata/*.json", json.Unmarshal)
+		a.NotError(err).Length(ls, 1)
+		for _, l := range ls {
+			l.Catalog(b)
+		}
 		p := message.NewPrinter(language.MustParse("cmn-hans"), message.Catalog(b))
 
 		a.Equal(p.Sprintf("k1"), "msg1")

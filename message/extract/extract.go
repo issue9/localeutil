@@ -23,6 +23,12 @@ import (
 	"github.com/issue9/localeutil/message"
 )
 
+// Logger 日志输出接口
+type Logger interface {
+	Print(...any)
+	Printf(string, ...any)
+}
+
 type Options struct {
 	// Language 提取内容的语言 ID
 	Language language.Tag
@@ -41,7 +47,7 @@ type Options struct {
 	SkipSubModule bool
 
 	// 日志输出通道
-	Log message.Logger
+	Log Logger
 
 	// 用于输出本地化内容的函数列表
 	//
@@ -63,7 +69,7 @@ type Options struct {
 }
 
 type extracter struct {
-	log   message.Logger
+	log   Logger
 	funcs []localeFunc
 	fset  *token.FileSet
 
@@ -161,7 +167,7 @@ func (ex *extracter) inspectFile(p string, f *ast.File) {
 			ex.mux.Lock()
 			defer ex.mux.Unlock()
 
-			if sliceutil.Exists(ex.msg, func(m message.Message) bool { return m.Key == msg.Key }) {
+			if sliceutil.Exists(ex.msg, func(m message.Message, _ int) bool { return m.Key == msg.Key }) {
 				p := ex.fset.Position(expr.Pos())
 				log.Printf("存在相同的本地化信息 %s，将被忽略，位于：%s:%d", msg.Key, p.Filename, p.Line)
 				return true
@@ -196,7 +202,7 @@ func (ex *extracter) inspect(expr *ast.CallExpr, mods []importFunc) message.Mess
 		name = f.Name
 	}
 
-	exists := sliceutil.Exists(mods, func(m importFunc) bool {
+	exists := sliceutil.Exists(mods, func(m importFunc, _ int) bool {
 		ok := m.name == name && modName == m.modName
 		if structName != "" {
 			ok = ok && structName == m.structName
@@ -244,7 +250,7 @@ func (ex *extracter) getObjectName(obj *ast.Object) (modName, structName string)
 	return "", ""
 }
 
-func getExprNames(expr ast.Expr, log message.Logger) (modName, structName string) {
+func getExprNames(expr ast.Expr, log Logger) (modName, structName string) {
 	switch s := expr.(type) {
 	case *ast.SelectorExpr:
 		return s.X.(*ast.Ident).Name, s.Sel.Name
