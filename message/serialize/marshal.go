@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"sort"
 
 	"github.com/issue9/localeutil/message"
 )
@@ -13,7 +14,14 @@ import (
 type MarshalFunc = func(any) ([]byte, error)
 
 // Marshal 将当前对象转换为 []byte
-func Marshal(l *message.Language, f MarshalFunc) ([]byte, error) { return f(l) }
+func Marshal(l *message.Language, f MarshalFunc) ([]byte, error) {
+	// 输出前排序，保证相同内容输出的内容是一样的。
+	sort.SliceStable(l.Messages, func(i, j int) bool {
+		return l.Messages[i].Key < l.Messages[j].Key
+	})
+
+	return f(l)
+}
 
 // SaveFile 将当前对象编码为文本并存入 path
 //

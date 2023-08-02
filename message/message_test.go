@@ -35,11 +35,12 @@ func TestLanguage_MergeTo(t *testing.T) {
 		Messages: []Message{{Key: "dest"}},
 	}
 	l := &Language{
-		ID:       language.SimplifiedChinese,
+		ID:       language.Afrikaans,
 		Messages: []Message{{Key: "l"}},
 	}
 	l.MergeTo(log, []*Language{dest})
-	a.Length(dest.Messages, 1).Equal(dest.Messages[0].Key, "l").
+	a.Equal(dest.ID, language.SimplifiedChinese).
+		Length(dest.Messages, 1).Equal(dest.Messages[0].Key, "l").
 		Length(l.Messages, 1).Equal(l.Messages[0].Key, "l")
 
 	dest = &Language{
