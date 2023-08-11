@@ -16,6 +16,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/issue9/localeutil"
 	"github.com/issue9/sliceutil"
 	"github.com/issue9/source"
 	"golang.org/x/text/language"
@@ -78,7 +79,7 @@ type extracter struct {
 }
 
 // Extract 提取本地化内容
-func Extract(ctx context.Context, o *Options) (*message.Language, error) {
+func Extract(ctx context.Context, p *localeutil.Printer, o *Options) (*message.Language, error) {
 	// NOTE: 有可能存在将 localeutil.Phrase 二次封装的情况，
 	// 为了尽可能多地找到本地化字符串，所以采用用户指定函数的方法。
 
@@ -95,7 +96,7 @@ func Extract(ctx context.Context, o *Options) (*message.Language, error) {
 		msg: make([]message.Message, 0, 100),
 	}
 
-	if err := ex.scanDirs(ctx, dirs); err != nil {
+	if err := ex.scanDirs(ctx, p, dirs); err != nil {
 		return nil, err
 	}
 
@@ -104,7 +105,7 @@ func Extract(ctx context.Context, o *Options) (*message.Language, error) {
 	return &message.Language{ID: o.Language, Messages: ex.msg}, nil
 }
 
-func (ex *extracter) scanDirs(ctx context.Context, dirs []string) error {
+func (ex *extracter) scanDirs(ctx context.Context, printer *localeutil.Printer, dirs []string) error {
 	wg := &sync.WaitGroup{}
 	for _, dir := range dirs {
 		entries, err := os.ReadDir(dir)
@@ -132,7 +133,7 @@ func (ex *extracter) scanDirs(ctx context.Context, dirs []string) error {
 						return
 					}
 
-					ex.inspectFile(p, f)
+					ex.inspectFile(p, printer, f)
 				}(filepath.Join(dir, e.Name()))
 			}
 		}
@@ -142,11 +143,11 @@ func (ex *extracter) scanDirs(ctx context.Context, dirs []string) error {
 	return nil
 }
 
-func (ex *extracter) inspectFile(p string, f *ast.File) {
+func (ex *extracter) inspectFile(p string, printer *localeutil.Printer, f *ast.File) {
 	modPath, err := source.ModPath(p)
 	switch {
 	case errors.Is(err, os.ErrNotExist):
-		ex.log.Printf("必须是在一个模块中，当前无法找到 go.mod 文件")
+		ex.log.Printf(localeutil.StringPhrase("go.mod not found").LocaleString(printer))
 		return
 	case err != nil:
 		ex.log.Print(err)
@@ -159,7 +160,7 @@ func (ex *extracter) inspectFile(p string, f *ast.File) {
 		case *ast.TypeSpec, *ast.ImportSpec:
 			return false
 		case *ast.CallExpr:
-			msg := ex.inspect(expr, mods)
+			msg := ex.inspect(printer, expr, mods)
 			if msg.Key == "" {
 				return true
 			}
@@ -169,7 +170,8 @@ func (ex *extracter) inspectFile(p string, f *ast.File) {
 
 			if sliceutil.Exists(ex.msg, func(m message.Message, _ int) bool { return m.Key == msg.Key }) {
 				p := ex.fset.Position(expr.Pos())
-				log.Printf("存在相同的本地化信息 %s，将被忽略，位于：%s:%d", msg.Key, p.Filename, p.Line)
+				msg := localeutil.Phrase("has same key %s at %s:%d, will be ignore", msg.Key, p.Filename, p.Line)
+				log.Println(msg.LocaleString(printer))
 				return true
 			}
 			ex.msg = append(ex.msg, msg)
@@ -179,7 +181,7 @@ func (ex *extracter) inspectFile(p string, f *ast.File) {
 	})
 }
 
-func (ex *extracter) inspect(expr *ast.CallExpr, mods []importFunc) message.Message {
+func (ex *extracter) inspect(p *localeutil.Printer, expr *ast.CallExpr, mods []importFunc) message.Message {
 	msg := message.Message{}
 	var modName, structName, name string
 
@@ -187,7 +189,7 @@ func (ex *extracter) inspect(expr *ast.CallExpr, mods []importFunc) message.Mess
 	case *ast.SelectorExpr:
 		switch ft := f.X.(type) {
 		case *ast.CallExpr: // localeutil.Phrase(xxx).LocaleString(p)
-			return ex.inspect(ft, mods)
+			return ex.inspect(p, ft, mods)
 		case *ast.Ident:
 			if ft.Obj != nil {
 				modName, structName = ex.getObjectName(ft.Obj)
@@ -224,7 +226,7 @@ func (ex *extracter) inspect(expr *ast.CallExpr, mods []importFunc) message.Mess
 			if d.Names != nil && d.Names[0].Obj.Kind == ast.Con {
 				key = d.Values[0].(*ast.BasicLit).Value
 			} else {
-				log.Printf("当前类型 %s 无法转换成本地化信息", d.Names[0].Obj.Kind)
+				log.Printf("the type %s can not covert to message", d.Names[0].Obj.Kind)
 			}
 		}
 	}

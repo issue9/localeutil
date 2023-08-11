@@ -1,0 +1,14 @@
+id: zh-CN
+
+messages:
+  - key: 'go.mod not found'
+    message:
+      msg: '未找到 go.mod 文件'
+
+  - key: 'has same key %s at %s:%d, will be ignore'
+    message:
+      msg: '在 %[1]s:%d 有相同的翻译项 %[2]s，将会被忽略！'
+
+  - key: 'the type %s can not covert to message'
+    message:
+      msg: '类型 %s 无法转换成本地化信息'

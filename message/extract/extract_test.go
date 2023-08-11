@@ -10,12 +10,16 @@ import (
 	"github.com/issue9/assert/v3"
 	"github.com/issue9/sliceutil"
 	"golang.org/x/text/language"
+	xm "golang.org/x/text/message"
+	"golang.org/x/text/message/catalog"
 
 	"github.com/issue9/localeutil/message"
 )
 
 func TestExtract(t *testing.T) {
 	a := assert.New(t, false)
+	b := catalog.NewBuilder()
+	p := xm.NewPrinter(language.SimplifiedChinese, xm.Catalog(b))
 
 	o := &Options{
 		Language:  language.MustParse("zh-CN"),
@@ -24,7 +28,7 @@ func TestExtract(t *testing.T) {
 		Log:       log.Default(),
 		Funcs:     []string{"github.com/issue9/localeutil.Phrase"},
 	}
-	l, err := Extract(context.Background(), o)
+	l, err := Extract(context.Background(), p, o)
 	a.NotError(err).NotNil(l).
 		Equal(l.ID.String(), "zh-CN")
 
@@ -51,7 +55,7 @@ func TestExtract(t *testing.T) {
 			"github.com/issue9/localeutil.StringPhrase",
 		},
 	}
-	l, err = Extract(context.Background(), o)
+	l, err = Extract(context.Background(), p, o)
 	a.NotError(err).NotNil(l).
 		NotNil(l).
 		Equal(l.ID.String(), "zh-CN")
@@ -79,7 +83,7 @@ func TestExtract(t *testing.T) {
 			"golang.org/x/text/message.Printer.Printf",
 		},
 	}
-	l, err = Extract(context.Background(), o)
+	l, err = Extract(context.Background(), p, o)
 	a.NotError(err).NotNil(l).
 		NotNil(l).
 		Equal(l.ID.String(), "zh-CN")
@@ -108,7 +112,7 @@ func TestExtract(t *testing.T) {
 			"github.com/issue9/localeutil/testdata.Print",
 		},
 	}
-	l, err = Extract(context.Background(), o)
+	l, err = Extract(context.Background(), p, o)
 	a.NotError(err).NotNil(l).
 		NotNil(l).
 		Equal(l.ID.String(), "zh-CN")
