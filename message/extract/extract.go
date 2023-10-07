@@ -24,12 +24,6 @@ import (
 	"github.com/issue9/localeutil/message"
 )
 
-// Logger 日志输出接口
-type Logger interface {
-	Print(...any)
-	Printf(string, ...any)
-}
-
 type Options struct {
 	// Language 提取内容的语言 ID
 	Language language.Tag
@@ -48,7 +42,7 @@ type Options struct {
 	SkipSubModule bool
 
 	// 日志输出通道
-	Log Logger
+	Log message.LogFunc
 
 	// 用于输出本地化内容的函数列表
 	//
@@ -70,7 +64,7 @@ type Options struct {
 }
 
 type extracter struct {
-	log   Logger
+	log   message.LogFunc
 	funcs []localeFunc
 	fset  *token.FileSet
 
@@ -129,7 +123,7 @@ func (ex *extracter) scanDirs(ctx context.Context, printer *localeutil.Printer, 
 
 					f, err := parser.ParseFile(ex.fset, p, nil, parser.ParseComments)
 					if err != nil {
-						ex.log.Print(err)
+						ex.log(err.Error())
 						return
 					}
 
@@ -147,10 +141,10 @@ func (ex *extracter) inspectFile(p string, printer *localeutil.Printer, f *ast.F
 	modPath, err := source.ModPath(p)
 	switch {
 	case errors.Is(err, os.ErrNotExist):
-		ex.log.Printf(localeutil.StringPhrase("go.mod not found").LocaleString(printer))
+		ex.log(localeutil.StringPhrase("go.mod not found").LocaleString(printer))
 		return
 	case err != nil:
-		ex.log.Print(err)
+		ex.log(err.Error())
 		return
 	}
 
@@ -226,7 +220,7 @@ func (ex *extracter) inspect(p *localeutil.Printer, expr *ast.CallExpr, mods []i
 			if d.Names != nil && d.Names[0].Obj.Kind == ast.Con {
 				key = d.Values[0].(*ast.BasicLit).Value
 			} else {
-				log.Printf("the type %s can not covert to message", d.Names[0].Obj.Kind)
+				log.Print(localeutil.Phrase("the type %s can not covert to message", d.Names[0].Obj.Kind).LocaleString(p))
 			}
 		}
 	}
@@ -244,22 +238,22 @@ func (ex *extracter) getObjectName(obj *ast.Object) (modName, structName string)
 	switch decl := obj.Decl.(type) {
 	case *ast.ValueSpec: // 局部变量/全局变量
 		if decl.Type != nil {
-			return getExprNames(decl.Type, ex.log)
+			return getExprNames(decl.Type)
 		}
 	case *ast.Field: // 函数参数
-		return getExprNames(decl.Type, ex.log)
+		return getExprNames(decl.Type)
 	}
 	return "", ""
 }
 
-func getExprNames(expr ast.Expr, log Logger) (modName, structName string) {
+func getExprNames(expr ast.Expr) (modName, structName string) {
 	switch s := expr.(type) {
 	case *ast.SelectorExpr:
 		return s.X.(*ast.Ident).Name, s.Sel.Name
 	case *ast.Ident:
 		return "", s.Name
 	case *ast.StarExpr:
-		return getExprNames(s.X, log)
+		return getExprNames(s.X)
 	}
 	return "", ""
 }

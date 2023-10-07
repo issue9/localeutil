@@ -25,7 +25,7 @@ func TestExtract(t *testing.T) {
 		Language:  language.MustParse("zh-CN"),
 		Root:      "./testdata",
 		Recursive: true,
-		Log:       log.Default(),
+		Log:       func(v string) { log.Print(v) },
 		Funcs:     []string{"github.com/issue9/localeutil.Phrase"},
 	}
 	l, err := Extract(context.Background(), p, o)
@@ -48,7 +48,7 @@ func TestExtract(t *testing.T) {
 		Language:  language.MustParse("zh-CN"),
 		Root:      "./testdata",
 		Recursive: true,
-		Log:       log.Default(),
+		Log:       func(v string) { log.Print(v) },
 		Funcs: []string{
 			"github.com/issue9/localeutil.Phrase",
 			"github.com/issue9/localeutil.Error",
@@ -75,7 +75,7 @@ func TestExtract(t *testing.T) {
 		Language:  language.MustParse("zh-CN"),
 		Root:      "./testdata",
 		Recursive: true,
-		Log:       log.Default(),
+		Log:       func(v string) { log.Print(v) },
 		Funcs: []string{
 			"github.com/issue9/localeutil.Phrase",
 			"github.com/issue9/localeutil.Error",
@@ -102,7 +102,7 @@ func TestExtract(t *testing.T) {
 		Language:  language.MustParse("zh-CN"),
 		Root:      "./testdata",
 		Recursive: true,
-		Log:       log.Default(),
+		Log:       func(v string) { log.Print(v) },
 		Funcs: []string{
 			"github.com/issue9/localeutil.Phrase",
 			"github.com/issue9/localeutil.Error",

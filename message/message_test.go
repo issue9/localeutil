@@ -28,7 +28,8 @@ func TestLanguage_Join(t *testing.T) {
 
 func TestLanguage_MergeTo(t *testing.T) {
 	a := assert.New(t, false)
-	log := func(string, ...any) {}
+	log := func(string) {}
+	p := message.NewPrinter(language.SimplifiedChinese)
 
 	dest := &Language{
 		ID:       language.SimplifiedChinese,
@@ -38,7 +39,7 @@ func TestLanguage_MergeTo(t *testing.T) {
 		ID:       language.Afrikaans,
 		Messages: []Message{{Key: "l"}},
 	}
-	l.MergeTo(log, []*Language{dest})
+	l.MergeTo(p, log, []*Language{dest})
 	a.Equal(dest.ID, language.SimplifiedChinese).
 		Length(dest.Messages, 1).Equal(dest.Messages[0].Key, "l").
 		Length(l.Messages, 1).Equal(l.Messages[0].Key, "l")
@@ -51,7 +52,7 @@ func TestLanguage_MergeTo(t *testing.T) {
 		ID:       language.SimplifiedChinese,
 		Messages: []Message{{Key: "l"}, {Key: "g"}},
 	}
-	l.MergeTo(log, []*Language{dest})
+	l.MergeTo(p, log, []*Language{dest})
 	a.Length(dest.Messages, 2).
 		Length(l.Messages, 2).Equal(l.Messages[0].Key, "l").Equal(l.Messages[1].Key, "g")
 }

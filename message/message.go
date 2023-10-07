@@ -8,6 +8,8 @@ import (
 	"golang.org/x/text/feature/plural"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message/catalog"
+
+	"github.com/issue9/localeutil"
 )
 
 type (
@@ -47,6 +49,8 @@ type (
 		Case  string `xml:"case,attr" json:"case" yaml:"case"`
 		Value string `xml:",chardata"`
 	}
+
+	LogFunc = func(string)
 )
 
 // Join 将 l2.Messages 并入 l.Messages
@@ -66,8 +70,6 @@ func (l *Language) Join(l2 *Language) {
 	}
 }
 
-type Logger = func(string, ...any)
-
 // Merge 将 l.Messages 写入 dest 中的每个元素
 //
 // 这将会执行以下几个步骤：
@@ -77,18 +79,18 @@ type Logger = func(string, ...any)
 //
 // 最终内容是 dest 为准。
 // log 所有删除的记录都将通过此输出；
-func (l *Language) MergeTo(log Logger, dest []*Language) {
+func (l *Language) MergeTo(p *localeutil.Printer, log LogFunc, dest []*Language) {
 	for _, d := range dest {
-		l.mergeTo(log, d)
+		l.mergeTo(p, log, d)
 	}
 }
 
-func (l *Language) mergeTo(log Logger, dest *Language) {
+func (l *Language) mergeTo(p *localeutil.Printer, log LogFunc, dest *Language) {
 	// 删除只存在于 dest 而不存在于 l 的内容
 	dest.Messages = sliceutil.Delete(dest.Messages, func(dm Message, _ int) bool {
 		exist := sliceutil.Exists(l.Messages, func(sm Message, _ int) bool { return sm.Key == dm.Key })
 		if !exist {
-			log("the key %s of %s not found, will be deleted", dest.ID, dm.Key)
+			log(localeutil.Phrase("the key %s of %s not found, will be deleted", dest.ID, dm.Key).LocaleString(p))
 		}
 		return !exist
 	})
