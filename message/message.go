@@ -51,8 +51,10 @@ type (
 
 // Join 将 l2.Messages 并入 l.Messages
 //
-// 如果 l2 的 [Message.Key] 存在于 l，则覆盖 l 的项；
-// 如果 l2 的 [Message.Key] 不存在于 l，则写入 l；
+// 执行以下操作：
+//
+//	-如果 l2 的 [Message.Key] 存在于 l，则覆盖 l 的项；
+//	-如果 l2 的 [Message.Key] 不存在于 l，则写入 l；
 func (l *Language) Join(l2 *Language) {
 	for index, m2 := range l2.Messages {
 		elem, found := sliceutil.At(l.Messages, func(m1 Message, _ int) bool { return m1.Key == m2.Key })
@@ -64,27 +66,29 @@ func (l *Language) Join(l2 *Language) {
 	}
 }
 
-type MergeLogFunc func(tag language.Tag, key string)
+type Logger = func(string, ...any)
 
-// Merge 将 l 并入 src
+// Merge 将 l.Messages 写入 dest 中的每个元素
 //
 // 这将会执行以下几个步骤：
-// - 删除只存在于 dest 而不存在于 l 的内容；
-// - 将 l 独有的项写入 dest；
+//
+//	-删除只存在于 dest 元素中而不存在于 l 的内容；
+//	-将 l 独有的项写入 dest；
+//
 // 最终内容是 dest 为准。
 // log 所有删除的记录都将通过此输出；
-func (l *Language) MergeTo(log MergeLogFunc, dest []*Language) {
+func (l *Language) MergeTo(log Logger, dest []*Language) {
 	for _, d := range dest {
 		l.mergeTo(log, d)
 	}
 }
 
-func (l *Language) mergeTo(log MergeLogFunc, dest *Language) {
+func (l *Language) mergeTo(log Logger, dest *Language) {
 	// 删除只存在于 dest 而不存在于 l 的内容
 	dest.Messages = sliceutil.Delete(dest.Messages, func(dm Message, _ int) bool {
 		exist := sliceutil.Exists(l.Messages, func(sm Message, _ int) bool { return sm.Key == dm.Key })
 		if !exist {
-			log(dest.ID, dm.Key)
+			log("the key %s of %s not found, will be deleted", dest.ID, dm.Key)
 		}
 		return !exist
 	})

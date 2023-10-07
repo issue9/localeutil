@@ -28,7 +28,7 @@ func TestLanguage_Join(t *testing.T) {
 
 func TestLanguage_MergeTo(t *testing.T) {
 	a := assert.New(t, false)
-	log := func(tag language.Tag, key string) {}
+	log := func(string, ...any) {}
 
 	dest := &Language{
 		ID:       language.SimplifiedChinese,

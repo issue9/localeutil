@@ -7,7 +7,7 @@ messages:
 
   - key: 'has same key %s at %s:%d, will be ignore'
     message:
-      msg: '在 %[1]s:%d 有相同的翻译项 %[2]s，将会被忽略！'
+      msg: '在 %[2]s:%[3]d 有相同的翻译项 %[1]s，将会被忽略！'
 
   - key: 'the type %s can not covert to message'
     message:

@@ -13,7 +13,7 @@ import (
 
 type MarshalFunc = func(any) ([]byte, error)
 
-// Marshal 将当前对象转换为 []byte
+// Marshal 将 l 转换为 []byte
 func Marshal(l *message.Language, f MarshalFunc) ([]byte, error) {
 	// 输出前排序，保证相同内容输出的内容是一样的。
 	sort.SliceStable(l.Messages, func(i, j int) bool {
@@ -23,7 +23,7 @@ func Marshal(l *message.Language, f MarshalFunc) ([]byte, error) {
 	return f(l)
 }
 
-// SaveFile 将当前对象编码为文本并存入 path
+// SaveFile 将 l 编码为文本并存入 path
 //
 // 如果文件已经存在会被覆盖。
 func SaveFile(l *message.Language, path string, f MarshalFunc, mode fs.FileMode) error {
@@ -34,7 +34,7 @@ func SaveFile(l *message.Language, path string, f MarshalFunc, mode fs.FileMode)
 	return err
 }
 
-// SaveFiles 将当前对象按语言 ID 分类保存
+// SaveFiles 将 langs 按语言 ID 分类保存
 func SaveFiles(langs []*message.Language, dir, ext string, f MarshalFunc, mode fs.FileMode) error {
 	if ext[0] != '.' {
 		ext = "." + ext
