@@ -63,7 +63,7 @@ type Options struct {
 	Funcs []string
 }
 
-type extracter struct {
+type extractor struct {
 	log   message.LogFunc
 	funcs []localeFunc
 	fset  *token.FileSet
@@ -82,7 +82,7 @@ func Extract(ctx context.Context, p *localeutil.Printer, o *Options) (*message.L
 		return nil, err
 	}
 
-	ex := &extracter{
+	ex := &extractor{
 		log:   o.Log,
 		funcs: split(o.Funcs...),
 		fset:  token.NewFileSet(),
@@ -99,7 +99,7 @@ func Extract(ctx context.Context, p *localeutil.Printer, o *Options) (*message.L
 	return &message.Language{ID: o.Language, Messages: ex.msg}, nil
 }
 
-func (ex *extracter) scanDirs(ctx context.Context, printer *localeutil.Printer, dirs []string) error {
+func (ex *extractor) scanDirs(ctx context.Context, printer *localeutil.Printer, dirs []string) error {
 	wg := &sync.WaitGroup{}
 	for _, dir := range dirs {
 		entries, err := os.ReadDir(dir)
@@ -123,7 +123,7 @@ func (ex *extracter) scanDirs(ctx context.Context, printer *localeutil.Printer, 
 
 					f, err := parser.ParseFile(ex.fset, p, nil, parser.ParseComments)
 					if err != nil {
-						ex.log(err.Error())
+						ex.log(localeutil.ErrorAsLocaleString(err, printer))
 						return
 					}
 
@@ -137,14 +137,14 @@ func (ex *extracter) scanDirs(ctx context.Context, printer *localeutil.Printer, 
 	return nil
 }
 
-func (ex *extracter) inspectFile(p string, printer *localeutil.Printer, f *ast.File) {
+func (ex *extractor) inspectFile(p string, printer *localeutil.Printer, f *ast.File) {
 	modPath, err := source.ModPath(p)
 	switch {
 	case errors.Is(err, os.ErrNotExist):
 		ex.log(localeutil.StringPhrase("go.mod not found").LocaleString(printer))
 		return
 	case err != nil:
-		ex.log(err.Error())
+		ex.log(localeutil.ErrorAsLocaleString(err, printer))
 		return
 	}
 
@@ -175,7 +175,7 @@ func (ex *extracter) inspectFile(p string, printer *localeutil.Printer, f *ast.F
 	})
 }
 
-func (ex *extracter) inspect(p *localeutil.Printer, expr *ast.CallExpr, mods []importFunc) message.Message {
+func (ex *extractor) inspect(p *localeutil.Printer, expr *ast.CallExpr, mods []importFunc) message.Message {
 	msg := message.Message{}
 	var modName, structName, name string
 
@@ -234,7 +234,7 @@ func (ex *extracter) inspect(p *localeutil.Printer, expr *ast.CallExpr, mods []i
 	return msg
 }
 
-func (ex *extracter) getObjectName(obj *ast.Object) (modName, structName string) {
+func (ex *extractor) getObjectName(obj *ast.Object) (modName, structName string) {
 	switch decl := obj.Decl.(type) {
 	case *ast.ValueSpec: // 局部变量/全局变量
 		if decl.Type != nil {

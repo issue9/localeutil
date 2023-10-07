@@ -75,6 +75,12 @@ func TestError(t *testing.T) {
 	a.True(errors.Is(fmt.Errorf("err2 %w", err1), err1))
 	a.False(errors.Is(Error("k1"), Error("k1")))
 	a.False(errors.Is(Error("k1"), errors.New("k1")))
+
+	// ErrorAsLocaleString
+
+	a.Equal(ErrorAsLocaleString(err1, cnp), "cn")
+	a.Equal(ErrorAsLocaleString(err1, twp), "tw")
+	a.Equal(ErrorAsLocaleString(errors.New("k1"), twp), "k1")
 }
 
 func BenchmarkPhrase_LocaleString(b *testing.B) {

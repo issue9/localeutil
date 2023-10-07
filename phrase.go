@@ -76,3 +76,13 @@ func (err *localeError) LocaleString(p *Printer) string {
 func (sp StringPhrase) LocaleString(p *Printer) string { return p.Sprintf(string(sp)) }
 
 func (sp StringPhrase) String() string { return sp.LocaleString(defaultPrinter) }
+
+// ErrorAsLocaleString 尝试将 err 转换为 [LocaleStringer] 类型并输出
+//
+// 如果 err 未实现 [LocaleStringer] 接口，则将调用 [error.Error]。
+func ErrorAsLocaleString(err error, p *Printer) string {
+	if ls, ok := err.(LocaleStringer); ok {
+		return ls.LocaleString(p)
+	}
+	return err.Error()
+}
