@@ -6,6 +6,9 @@ messages:
     - key: has same key %s at %s:%d, will be ignore
       message:
         msg: has same key %s at %s:%d, will be ignore
+    - key: not found unmarshal for %s
+      message:
+        msg: not found unmarshal for %s
     - key: the key %s of %s not found, will be deleted
       message:
         msg: the key %s of %s not found, will be deleted

@@ -20,12 +20,12 @@ func TestLoad(t *testing.T) {
 	a.NotError(err).NotNil(l)
 	a.Equal(l.ID.String(), "cmn-Hans")
 
-	ls, err := LoadFSGlob(os.DirFS("./testdata"), "*.json", json.Unmarshal)
+	ls, err := LoadFSGlob(func(string) UnmarshalFunc { return json.Unmarshal }, "*.json", os.DirFS("./testdata"))
 	a.NotError(err).Length(ls, 1)
 	a.Length(ls, 1).
 		Equal(ls[0].ID.String(), "cmn-Hans")
 
-	ls, err = LoadGlob("./testdata/*.xml", xml.Unmarshal)
+	ls, err = LoadGlob(func(string) UnmarshalFunc { return xml.Unmarshal }, "./testdata/*.xml")
 	a.NotError(err).Length(ls, 1)
 }
 

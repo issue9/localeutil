@@ -7,12 +7,16 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/issue9/localeutil"
 	"github.com/issue9/sliceutil"
 
 	"github.com/issue9/localeutil/message"
 )
 
 type UnmarshalFunc = func([]byte, any) error
+
+// Search 根据文件名查找解码的方法
+type Search = func(string) UnmarshalFunc
 
 // Unmarshal 加载内容
 func Unmarshal(data []byte, u UnmarshalFunc) (*message.Language, error) {
@@ -42,7 +46,7 @@ func unmarshalFS(f func() ([]byte, error), u UnmarshalFunc) (*message.Language, 
 // LoadGlob 批量加载文件
 //
 // 相同语言 ID 的项会合并。
-func LoadGlob(glob string, u UnmarshalFunc) ([]*message.Language, error) {
+func LoadGlob(s Search, glob string) ([]*message.Language, error) {
 	matches, err := filepath.Glob(glob)
 	if err != nil {
 		return nil, err
@@ -50,6 +54,10 @@ func LoadGlob(glob string, u UnmarshalFunc) ([]*message.Language, error) {
 
 	langs := make([]*message.Language, 0, len(matches))
 	for _, match := range matches {
+		u := s(match)
+		if u == nil {
+			return nil, localeutil.Error("not found unmarshal for %s", match)
+		}
 		l, err := LoadFile(match, u)
 		if err != nil {
 			return nil, err
@@ -63,19 +71,26 @@ func LoadGlob(glob string, u UnmarshalFunc) ([]*message.Language, error) {
 // LoadFSGlob 批量加载文件
 //
 // 相同语言 ID 的项会合并。
-func LoadFSGlob(fsys fs.FS, glob string, u UnmarshalFunc) ([]*message.Language, error) {
-	matches, err := fs.Glob(fsys, glob)
-	if err != nil {
-		return nil, err
-	}
-
-	langs := make([]*message.Language, 0, len(matches))
-	for _, match := range matches {
-		l, err := LoadFS(fsys, match, u)
+func LoadFSGlob(s Search, glob string, fsys ...fs.FS) ([]*message.Language, error) {
+	langs := make([]*message.Language, 0, 10)
+	for _, f := range fsys {
+		matches, err := fs.Glob(f, glob)
 		if err != nil {
 			return nil, err
 		}
-		langs = append(langs, l)
+
+		for _, match := range matches {
+			u := s(match)
+			if u == nil {
+				return nil, localeutil.Error("not found unmarshal for %s", match)
+			}
+
+			l, err := LoadFS(f, match, u)
+			if err != nil {
+				return nil, err
+			}
+			langs = append(langs, l)
+		}
 	}
 
 	return joinLanguages(langs), nil

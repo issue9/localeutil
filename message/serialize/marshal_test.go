@@ -43,7 +43,7 @@ func TestCatalog(t *testing.T) {
 		a := assert.New(t, false)
 		b := catalog.NewBuilder()
 
-		ls, err := LoadGlob("./testdata/*.json", json.Unmarshal)
+		ls, err := LoadGlob(func(string) UnmarshalFunc { return json.Unmarshal }, "./testdata/*.json")
 		a.NotError(err).Length(ls, 1)
 		for _, l := range ls {
 			l.Catalog(b)
