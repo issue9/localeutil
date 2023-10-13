@@ -7,11 +7,11 @@ import (
 	"golang.org/x/text/message"
 )
 
-var defaultPrinter = message.NewPrinter(language.Und)
+var defaultPrinter = message.NewPrinter(language.Und, message.Catalog(message.DefaultCatalog))
 
 type (
-	// LocaleStringer 本地化字符串的接口中
-	LocaleStringer interface {
+	// Stringer 本地化字符串
+	Stringer interface {
 		// LocaleString 返回当前对象的本地化字符串
 		LocaleString(*Printer) string
 	}
@@ -25,7 +25,7 @@ type (
 
 	localeError phrase
 
-	// StringPhrase 由字符串组成的 [LocaleStringer] 实现
+	// StringPhrase 由字符串组成的 [Stringer] 实现
 	//
 	// 与 [Phrase] 不同，StringPhrase 可以是常量，且大部分情况下适用。
 	StringPhrase string
@@ -36,10 +36,10 @@ type (
 // Phrase 返回一段未翻译的语言片段
 //
 // key 和 val 参数与 [Printer.Sprintf] 的参数相同。
-// 如果 val 也实现了 [LocaleStringer] 接口，则会先调用 val 的 LocaleString 方法。
+// 如果 val 也实现了 [Stringer] 接口，则会先调用 val 的 LocaleString 方法。
 //
 // 如果 val 为空，将返回 StringPhrase(key)。
-func Phrase(key string, val ...any) LocaleStringer {
+func Phrase(key string, val ...any) Stringer {
 	if len(val) == 0 {
 		return StringPhrase(key)
 	}
@@ -48,7 +48,7 @@ func Phrase(key string, val ...any) LocaleStringer {
 
 // Error 返回未翻译的错误对象
 //
-// 该对象同时实现了 [LocaleStringer] 接口。
+// 该对象同时实现了 [Stringer] 接口。
 func Error(key string, val ...any) error {
 	return &localeError{key: key, values: val}
 }
@@ -56,7 +56,7 @@ func Error(key string, val ...any) error {
 func (p phrase) LocaleString(printer *Printer) string {
 	values := make([]any, 0, len(p.values))
 	for _, value := range p.values {
-		if ls, ok := value.(LocaleStringer); ok {
+		if ls, ok := value.(Stringer); ok {
 			value = ls.LocaleString(printer)
 		}
 		values = append(values, value)
@@ -77,11 +77,11 @@ func (sp StringPhrase) LocaleString(p *Printer) string { return p.Sprintf(string
 
 func (sp StringPhrase) String() string { return sp.LocaleString(defaultPrinter) }
 
-// ErrorAsLocaleString 尝试将 err 转换为 [LocaleStringer] 类型并输出
+// ErrorAsLocaleString 尝试将 err 转换为 [Stringer] 类型并输出
 //
-// 如果 err 未实现 [LocaleStringer] 接口，则将调用 [error.Error]。
+// 如果 err 未实现 [Stringer] 接口，则将调用 [error.Error]。
 func ErrorAsLocaleString(err error, p *Printer) string {
-	if ls, ok := err.(LocaleStringer); ok {
+	if ls, ok := err.(Stringer); ok {
 		return ls.LocaleString(p)
 	}
 	return err.Error()

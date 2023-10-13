@@ -13,15 +13,15 @@ import (
 )
 
 var (
-	_ LocaleStringer = phrase{}
-	_ LocaleStringer = &phrase{}
-	_ LocaleStringer = StringPhrase("123")
+	_ Stringer = phrase{}
+	_ Stringer = &phrase{}
+	_ Stringer = StringPhrase("123")
 
-	_ error          = &localeError{}
-	_ LocaleStringer = &localeError{}
+	_ error    = &localeError{}
+	_ Stringer = &localeError{}
 )
 
-func TestLocaleStringer(t *testing.T) {
+func TestStringer(t *testing.T) {
 	a := assert.New(t, false)
 
 	a.NotError(message.SetString(language.SimplifiedChinese, "k1", "cn"))
@@ -59,14 +59,14 @@ func TestError(t *testing.T) {
 	twp := message.NewPrinter(language.TraditionalChinese, message.Catalog(message.DefaultCatalog))
 
 	err := Error("k1")
-	le, ok := err.(LocaleStringer)
+	le, ok := err.(Stringer)
 	a.True(ok).NotNil(le)
 	a.Equal(le.LocaleString(cnp), "cn")
 	a.Equal(le.LocaleString(twp), "tw")
 	a.Equal(err.Error(), "k1")
 
 	err = Error("not-exists")
-	le, ok = err.(LocaleStringer)
+	le, ok = err.(Stringer)
 	a.True(ok).NotNil(le)
 	a.Equal(le.LocaleString(twp), "not-exists")
 
@@ -93,7 +93,7 @@ func BenchmarkPhrase_LocaleString(b *testing.B) {
 	cnp := message.NewPrinter(language.SimplifiedChinese, message.Catalog(message.DefaultCatalog))
 
 	p1 := Phrase("k1")
-	b.Run("0 LocaleStringer", func(b *testing.B) {
+	b.Run("0 Stringer", func(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			a.Equal(p1.LocaleString(cnp), "cn")
@@ -101,7 +101,7 @@ func BenchmarkPhrase_LocaleString(b *testing.B) {
 	})
 
 	p2 := Phrase("k2", p1)
-	b.Run("1 LocaleStringer", func(b *testing.B) {
+	b.Run("1 Stringer", func(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			a.Equal(p2.LocaleString(cnp), "cn cn")
@@ -109,7 +109,7 @@ func BenchmarkPhrase_LocaleString(b *testing.B) {
 	})
 
 	p3 := Phrase("k3", p2)
-	b.Run("2 LocaleStringer", func(b *testing.B) {
+	b.Run("2 Stringer", func(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			a.Equal(p3.LocaleString(cnp), "cn cn cn")
@@ -117,7 +117,7 @@ func BenchmarkPhrase_LocaleString(b *testing.B) {
 	})
 
 	p4 := Phrase("k4", p1, p1, p1)
-	b.Run("3 LocaleStringer", func(b *testing.B) {
+	b.Run("3 Stringer", func(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			a.Equal(p4.LocaleString(cnp), "cn cn cn cn")
