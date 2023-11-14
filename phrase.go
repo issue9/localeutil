@@ -3,11 +3,10 @@
 package localeutil
 
 import (
-	"golang.org/x/text/language"
+	"fmt"
+
 	"golang.org/x/text/message"
 )
-
-var defaultPrinter = message.NewPrinter(language.Und, message.Catalog(message.DefaultCatalog))
 
 type (
 	// Stringer 本地化字符串
@@ -65,9 +64,21 @@ func (p phrase) LocaleString(printer *Printer) string {
 	return printer.Sprintf(p.key, values...)
 }
 
-func (p phrase) String() string { return p.LocaleString(defaultPrinter) }
+func (p phrase) String() string {
+	values := make([]any, 0, len(p.values))
+	for _, value := range p.values {
+		if ls, ok := value.(fmt.Stringer); ok {
+			value = ls.String()
+		}
+		values = append(values, value)
+	}
 
-func (err *localeError) Error() string { return err.LocaleString(defaultPrinter) }
+	return fmt.Sprintf(p.key, values...)
+}
+
+func (err *localeError) Error() string { return err.String() }
+
+func (err *localeError) String() string { return phrase(*err).String() }
 
 func (err *localeError) LocaleString(p *Printer) string {
 	return phrase(*err).LocaleString(p)
@@ -75,11 +86,14 @@ func (err *localeError) LocaleString(p *Printer) string {
 
 func (sp StringPhrase) LocaleString(p *Printer) string { return p.Sprintf(string(sp)) }
 
-func (sp StringPhrase) String() string { return sp.LocaleString(defaultPrinter) }
+func (sp StringPhrase) String() string { return string(sp) }
 
 // ErrorAsLocaleString 尝试将 err 转换为 [Stringer] 类型并输出
 //
 // 如果 err 未实现 [Stringer] 接口，则将调用 [error.Error]。
+//
+// NOTE: 未考虑 err 是否实现 xerrors.FormatError 等情况，
+// 可作为简单的内容输出，正式环境作更多的类型判断。
 func ErrorAsLocaleString(err error, p *Printer) string {
 	if ls, ok := err.(Stringer); ok {
 		return ls.LocaleString(p)
