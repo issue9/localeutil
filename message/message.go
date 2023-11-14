@@ -50,7 +50,7 @@ type (
 		Value string `xml:",chardata"`
 	}
 
-	LogFunc = func(string)
+	LogFunc = func(localeutil.Stringer)
 )
 
 // Join 将 l2.Messages 并入 l.Messages
@@ -79,18 +79,18 @@ func (l *Language) Join(l2 *Language) {
 //
 // 最终内容是 dest 为准。
 // log 所有删除的记录都将通过此输出；
-func (l *Language) MergeTo(p *localeutil.Printer, log LogFunc, dest []*Language) {
+func (l *Language) MergeTo(log LogFunc, dest []*Language) {
 	for _, d := range dest {
-		l.mergeTo(p, log, d)
+		l.mergeTo(log, d)
 	}
 }
 
-func (l *Language) mergeTo(p *localeutil.Printer, log LogFunc, dest *Language) {
+func (l *Language) mergeTo(log LogFunc, dest *Language) {
 	// 删除只存在于 dest 而不存在于 l 的内容
 	dest.Messages = sliceutil.Delete(dest.Messages, func(dm Message, _ int) bool {
 		exist := sliceutil.Exists(l.Messages, func(sm Message, _ int) bool { return sm.Key == dm.Key })
 		if !exist {
-			log(localeutil.Phrase("the key %s of %s not found, will be deleted", dest.ID, dm.Key).LocaleString(p))
+			log(localeutil.Phrase("the key %s of %s not found, will be deleted", dest.ID, dm.Key))
 		}
 		return !exist
 	})

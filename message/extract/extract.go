@@ -73,7 +73,7 @@ type extractor struct {
 }
 
 // Extract 提取本地化内容
-func Extract(ctx context.Context, p *localeutil.Printer, o *Options) (*message.Language, error) {
+func Extract(ctx context.Context, o *Options) (*message.Language, error) {
 	// NOTE: 有可能存在将 localeutil.Phrase 二次封装的情况，
 	// 为了尽可能多地找到本地化字符串，所以采用用户指定函数的方法。
 
@@ -90,7 +90,7 @@ func Extract(ctx context.Context, p *localeutil.Printer, o *Options) (*message.L
 		msg: make([]message.Message, 0, 100),
 	}
 
-	if err := ex.scanDirs(ctx, p, dirs); err != nil {
+	if err := ex.scanDirs(ctx, dirs); err != nil {
 		return nil, err
 	}
 
@@ -99,7 +99,7 @@ func Extract(ctx context.Context, p *localeutil.Printer, o *Options) (*message.L
 	return &message.Language{ID: o.Language, Messages: ex.msg}, nil
 }
 
-func (ex *extractor) scanDirs(ctx context.Context, printer *localeutil.Printer, dirs []string) error {
+func (ex *extractor) scanDirs(ctx context.Context, dirs []string) error {
 	wg := &sync.WaitGroup{}
 	for _, dir := range dirs {
 		entries, err := os.ReadDir(dir)
@@ -123,11 +123,11 @@ func (ex *extractor) scanDirs(ctx context.Context, printer *localeutil.Printer, 
 
 					f, err := parser.ParseFile(ex.fset, p, nil, parser.ParseComments)
 					if err != nil {
-						ex.log(localeutil.ErrorAsLocaleString(err, printer))
+						logErr(err, ex.log)
 						return
 					}
 
-					ex.inspectFile(p, printer, f)
+					ex.inspectFile(p, f)
 				}(filepath.Join(dir, e.Name()))
 			}
 		}
@@ -137,14 +137,24 @@ func (ex *extractor) scanDirs(ctx context.Context, printer *localeutil.Printer, 
 	return nil
 }
 
-func (ex *extractor) inspectFile(p string, printer *localeutil.Printer, f *ast.File) {
+func logErr(err error, log message.LogFunc) {
+	if e, ok := err.(localeutil.Stringer); ok {
+		log(e)
+		return
+	}
+	log(localeutil.StringPhrase(err.Error()))
+}
+
+func (ex *extractor) inspectFile(p string, f *ast.File) {
+	const notFound = localeutil.StringPhrase("go.mod not found")
+
 	modPath, err := source.ModPath(p)
 	switch {
 	case errors.Is(err, os.ErrNotExist):
-		ex.log(localeutil.StringPhrase("go.mod not found").LocaleString(printer))
+		ex.log(notFound)
 		return
 	case err != nil:
-		ex.log(localeutil.ErrorAsLocaleString(err, printer))
+		logErr(err, ex.log)
 		return
 	}
 
@@ -154,7 +164,7 @@ func (ex *extractor) inspectFile(p string, printer *localeutil.Printer, f *ast.F
 		case *ast.TypeSpec, *ast.ImportSpec:
 			return false
 		case *ast.CallExpr:
-			msg := ex.inspect(printer, expr, mods)
+			msg := ex.inspect(expr, mods)
 			if msg.Key == "" {
 				return true
 			}
@@ -164,8 +174,7 @@ func (ex *extractor) inspectFile(p string, printer *localeutil.Printer, f *ast.F
 
 			if sliceutil.Exists(ex.msg, func(m message.Message, _ int) bool { return m.Key == msg.Key }) {
 				p := ex.fset.Position(expr.Pos())
-				msg := localeutil.Phrase("has same key %s at %s:%d, will be ignore", msg.Key, p.Filename, p.Line)
-				log.Println(msg.LocaleString(printer))
+				log.Println(localeutil.Phrase("has same key %s at %s:%d, will be ignore", msg.Key, p.Filename, p.Line))
 				return true
 			}
 			ex.msg = append(ex.msg, msg)
@@ -175,7 +184,7 @@ func (ex *extractor) inspectFile(p string, printer *localeutil.Printer, f *ast.F
 	})
 }
 
-func (ex *extractor) inspect(p *localeutil.Printer, expr *ast.CallExpr, mods []importFunc) message.Message {
+func (ex *extractor) inspect(expr *ast.CallExpr, mods []importFunc) message.Message {
 	msg := message.Message{}
 	var modName, structName, name string
 
@@ -183,7 +192,7 @@ func (ex *extractor) inspect(p *localeutil.Printer, expr *ast.CallExpr, mods []i
 	case *ast.SelectorExpr:
 		switch ft := f.X.(type) {
 		case *ast.CallExpr: // localeutil.Phrase(xxx).LocaleString(p)
-			return ex.inspect(p, ft, mods)
+			return ex.inspect(ft, mods)
 		case *ast.Ident:
 			if ft.Obj != nil {
 				modName, structName = ex.getObjectName(ft.Obj)
@@ -220,7 +229,7 @@ func (ex *extractor) inspect(p *localeutil.Printer, expr *ast.CallExpr, mods []i
 			if d.Names != nil && d.Names[0].Obj.Kind == ast.Con {
 				key = d.Values[0].(*ast.BasicLit).Value
 			} else {
-				log.Print(localeutil.Phrase("the type %s can not covert to message", d.Names[0].Obj.Kind).LocaleString(p))
+				ex.log(localeutil.Phrase("the type %s can not covert to message", d.Names[0].Obj.Kind))
 			}
 		}
 	}

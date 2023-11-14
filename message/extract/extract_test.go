@@ -13,6 +13,7 @@ import (
 	xm "golang.org/x/text/message"
 	"golang.org/x/text/message/catalog"
 
+	"github.com/issue9/localeutil"
 	"github.com/issue9/localeutil/message"
 )
 
@@ -20,15 +21,16 @@ func TestExtract(t *testing.T) {
 	a := assert.New(t, false)
 	b := catalog.NewBuilder()
 	p := xm.NewPrinter(language.SimplifiedChinese, xm.Catalog(b))
+	log := func(v localeutil.Stringer) { log.Print(v.LocaleString(p)) }
 
 	o := &Options{
 		Language:  language.MustParse("zh-CN"),
 		Root:      "./testdata",
 		Recursive: true,
-		Log:       func(v string) { log.Print(v) },
+		Log:       log,
 		Funcs:     []string{"github.com/issue9/localeutil.Phrase"},
 	}
-	l, err := Extract(context.Background(), p, o)
+	l, err := Extract(context.Background(), o)
 	a.NotError(err).NotNil(l).
 		Equal(l.ID.String(), "zh-CN")
 
@@ -48,14 +50,14 @@ func TestExtract(t *testing.T) {
 		Language:  language.MustParse("zh-CN"),
 		Root:      "./testdata",
 		Recursive: true,
-		Log:       func(v string) { log.Print(v) },
+		Log:       log,
 		Funcs: []string{
 			"github.com/issue9/localeutil.Phrase",
 			"github.com/issue9/localeutil.Error",
 			"github.com/issue9/localeutil.StringPhrase",
 		},
 	}
-	l, err = Extract(context.Background(), p, o)
+	l, err = Extract(context.Background(), o)
 	a.NotError(err).NotNil(l).
 		NotNil(l).
 		Equal(l.ID.String(), "zh-CN")
@@ -75,7 +77,7 @@ func TestExtract(t *testing.T) {
 		Language:  language.MustParse("zh-CN"),
 		Root:      "./testdata",
 		Recursive: true,
-		Log:       func(v string) { log.Print(v) },
+		Log:       log,
 		Funcs: []string{
 			"github.com/issue9/localeutil.Phrase",
 			"github.com/issue9/localeutil.Error",
@@ -83,7 +85,7 @@ func TestExtract(t *testing.T) {
 			"golang.org/x/text/message.Printer.Printf",
 		},
 	}
-	l, err = Extract(context.Background(), p, o)
+	l, err = Extract(context.Background(), o)
 	a.NotError(err).NotNil(l).
 		NotNil(l).
 		Equal(l.ID.String(), "zh-CN")
@@ -102,7 +104,7 @@ func TestExtract(t *testing.T) {
 		Language:  language.MustParse("zh-CN"),
 		Root:      "./testdata",
 		Recursive: true,
-		Log:       func(v string) { log.Print(v) },
+		Log:       log,
 		Funcs: []string{
 			"github.com/issue9/localeutil.Phrase",
 			"github.com/issue9/localeutil.Error",
@@ -112,7 +114,7 @@ func TestExtract(t *testing.T) {
 			"github.com/issue9/localeutil/testdata.Print",
 		},
 	}
-	l, err = Extract(context.Background(), p, o)
+	l, err = Extract(context.Background(), o)
 	a.NotError(err).NotNil(l).
 		NotNil(l).
 		Equal(l.ID.String(), "zh-CN")
