@@ -12,7 +12,9 @@ type (
 	// Stringer 本地化字符串
 	Stringer interface {
 		// LocaleString 返回当前对象的本地化字符串
-		LocaleString(*Printer) string
+		//
+		// 如果 p 为 nil，可采用 [fmt.Sprintf] 的返回值。
+		LocaleString(p *Printer) string
 	}
 
 	phrase struct {
@@ -53,6 +55,10 @@ func Error(key string, val ...any) error {
 }
 
 func (p phrase) LocaleString(printer *Printer) string {
+	if printer == nil {
+		return fmt.Sprintf(p.key, p.values...)
+	}
+
 	values := make([]any, 0, len(p.values))
 	for _, value := range p.values {
 		if ls, ok := value.(Stringer); ok {
@@ -64,29 +70,18 @@ func (p phrase) LocaleString(printer *Printer) string {
 	return printer.Sprintf(p.key, values...)
 }
 
-func (p phrase) String() string {
-	values := make([]any, 0, len(p.values))
-	for _, value := range p.values {
-		if ls, ok := value.(fmt.Stringer); ok {
-			value = ls.String()
-		}
-		values = append(values, value)
-	}
-
-	return fmt.Sprintf(p.key, values...)
-}
-
-func (err *localeError) Error() string { return err.String() }
-
-func (err *localeError) String() string { return phrase(*err).String() }
+func (err *localeError) Error() string { return phrase(*err).LocaleString(nil) }
 
 func (err *localeError) LocaleString(p *Printer) string {
 	return phrase(*err).LocaleString(p)
 }
 
-func (sp StringPhrase) LocaleString(p *Printer) string { return p.Sprintf(string(sp)) }
-
-func (sp StringPhrase) String() string { return string(sp) }
+func (sp StringPhrase) LocaleString(p *Printer) string {
+	if p == nil {
+		return string(sp)
+	}
+	return p.Sprintf(string(sp))
+}
 
 // ErrorAsLocaleString 尝试将 err 转换为 [Stringer] 类型并输出
 //
