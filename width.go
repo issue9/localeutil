@@ -18,12 +18,12 @@ var defaultWidthOptions = WidthOptions{
 // WidthOptions 用于指定各类字符的宽度
 //
 // 拥有以下几个配置项：
-// - [width.EastAsianFullwidth]: 2
-// - [width.EastAsianWide]:      2
-// - [width.EastAsianHalfwidth]: 1
-// - [width.EastAsianNarrow]:    1
-// - [width.Neutral]:            1
-// - [width.EastAsianAmbiguous]: 1
+//   - [width.EastAsianFullwidth]: 2
+//   - [width.EastAsianWide]:      2
+//   - [width.EastAsianHalfwidth]: 1
+//   - [width.EastAsianNarrow]:    1
+//   - [width.Neutral]:            1
+//   - [width.EastAsianAmbiguous]: 1
 //
 // 对于 [width.EastAsianAmbiguous] 不同的字体可能有不同的设置。
 type WidthOptions map[width.Kind]int
