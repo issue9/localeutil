@@ -3,6 +3,7 @@
 package localeutil
 
 import (
+	"errors"
 	"fmt"
 
 	"golang.org/x/text/message"
@@ -54,6 +55,7 @@ func Phrase(key string, val ...any) Stringer {
 // Error 返回未翻译的错误对象
 //
 // 该对象同时实现了 [Stringer] 接口。
+// 如果 val 中包含 error 对象，可以用 [errors.Is] 进行检测。
 func Error(key string, val ...any) error {
 	if len(val) == 0 {
 		return &stringError{key: key}
@@ -81,6 +83,15 @@ func (err *phraseError) Error() string { return err.LocaleString(nil) }
 
 func (err *phraseError) LocaleString(p *Printer) string {
 	return phrase(*err).LocaleString(p)
+}
+
+func (err *phraseError) Is(target error) bool {
+	for _, v := range err.values {
+		if e, ok := v.(error); ok && errors.Is(e, target) {
+			return true
+		}
+	}
+	return false
 }
 
 func (err *stringError) Error() string { return err.LocaleString(nil) }

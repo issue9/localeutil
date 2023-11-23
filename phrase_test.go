@@ -85,10 +85,14 @@ func TestError(t *testing.T) {
 	a.Equal(Error("k1"), err1)
 	a.ErrorIs(err1, err1)
 	a.ErrorIs(fmt.Errorf("err2 %w", err1), err1)
+	a.ErrorIs(Error("is %s", err1), err1)
+	a.ErrorIs(Error("is %s %s", errors.New("abc"), err1), err1)
 	a.False(errors.Is(Error("k1"), Error("k1")))             // 非同一个对象，行为与 errors.New 是相同的
 	a.False(errors.Is(Error("k2 %d", 1), Error("k2 %d", 1))) // 参数相同的非同一对象
 	a.False(errors.Is(Error("k2 %d", 1), Error("k2 %d", 2)))
 	a.False(errors.Is(Error("k1"), errors.New("k1")))
+
+	// errors.Is
 }
 
 func BenchmarkPhrase_LocaleString(b *testing.B) {
