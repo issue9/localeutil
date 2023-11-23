@@ -24,7 +24,11 @@ type (
 		values []any
 	}
 
-	localeError phrase
+	phraseError phrase
+
+	stringError struct {
+		key string
+	}
 
 	// StringPhrase 由字符串组成的 [Stringer] 实现
 	//
@@ -51,7 +55,10 @@ func Phrase(key string, val ...any) Stringer {
 //
 // 该对象同时实现了 [Stringer] 接口。
 func Error(key string, val ...any) error {
-	return &localeError{key: key, values: val}
+	if len(val) == 0 {
+		return &stringError{key: key}
+	}
+	return &phraseError{key: key, values: val}
 }
 
 func (p phrase) LocaleString(printer *Printer) string {
@@ -70,10 +77,16 @@ func (p phrase) LocaleString(printer *Printer) string {
 	return printer.Sprintf(p.key, values...)
 }
 
-func (err *localeError) Error() string { return phrase(*err).LocaleString(nil) }
+func (err *phraseError) Error() string { return err.LocaleString(nil) }
 
-func (err *localeError) LocaleString(p *Printer) string {
+func (err *phraseError) LocaleString(p *Printer) string {
 	return phrase(*err).LocaleString(p)
+}
+
+func (err *stringError) Error() string { return err.LocaleString(nil) }
+
+func (err *stringError) LocaleString(p *Printer) string {
+	return StringPhrase(err.key).LocaleString(p)
 }
 
 func (sp StringPhrase) LocaleString(p *Printer) string {

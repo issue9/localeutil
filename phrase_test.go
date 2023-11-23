@@ -17,8 +17,11 @@ var (
 	_ Stringer = &phrase{}
 	_ Stringer = StringPhrase("123")
 
-	_ error    = &localeError{}
-	_ Stringer = &localeError{}
+	_ error    = &phraseError{}
+	_ Stringer = &phraseError{}
+
+	_ error    = &stringError{}
+	_ Stringer = &stringError{}
 )
 
 func TestStringer(t *testing.T) {
@@ -26,28 +29,25 @@ func TestStringer(t *testing.T) {
 
 	a.NotError(message.SetString(language.SimplifiedChinese, "k1", "cn"))
 	a.NotError(message.SetString(language.TraditionalChinese, "k1", "tw"))
-	a.NotError(message.SetString(language.SimplifiedChinese, "k2", "cn %[1]s"))
-	a.NotError(message.SetString(language.TraditionalChinese, "k2", "tw %[1]s"))
+	a.NotError(message.SetString(language.SimplifiedChinese, "k2 %s", "cn %[1]s"))
+	a.NotError(message.SetString(language.TraditionalChinese, "k2 %s", "tw %[1]s"))
 	cnp := message.NewPrinter(language.SimplifiedChinese, message.Catalog(message.DefaultCatalog))
 	twp := message.NewPrinter(language.TraditionalChinese, message.Catalog(message.DefaultCatalog))
 
+	// 转换为 StringPhrase
 	p := Phrase("k1")
 	a.Equal(p.LocaleString(cnp), "cn")
 	a.Equal(p.LocaleString(twp), "tw")
+	a.Equal(p.LocaleString(nil), "k1")
 
-	p = Phrase("k2", p)
+	// phrase
+	p = Phrase("k2 %s", p)
 	a.Equal(p.LocaleString(cnp), "cn cn")
 	a.Equal(p.LocaleString(twp), "tw tw")
+	a.Equal(p.LocaleString(nil), "k2 k1")
 
 	p = Phrase("not-exists")
 	a.Equal(p.LocaleString(twp), "not-exists")
-
-	p = StringPhrase("not-exists")
-	a.Equal(p.LocaleString(twp), "not-exists")
-
-	p = StringPhrase("k1")
-	a.Equal(p.LocaleString(cnp), "cn")
-	a.Equal(p.LocaleString(twp), "tw")
 }
 
 func TestError(t *testing.T) {
@@ -55,6 +55,8 @@ func TestError(t *testing.T) {
 
 	a.NotError(message.SetString(language.SimplifiedChinese, "k1", "cn"))
 	a.NotError(message.SetString(language.TraditionalChinese, "k1", "tw"))
+	a.NotError(message.SetString(language.SimplifiedChinese, "k2 %s", "cn %[1]s"))
+	a.NotError(message.SetString(language.TraditionalChinese, "k2 %s", "tw %[1]s"))
 	cnp := message.NewPrinter(language.SimplifiedChinese, message.Catalog(message.DefaultCatalog))
 	twp := message.NewPrinter(language.TraditionalChinese, message.Catalog(message.DefaultCatalog))
 
@@ -65,18 +67,27 @@ func TestError(t *testing.T) {
 	a.Equal(le.LocaleString(twp), "tw")
 	a.Equal(err.Error(), "k1")
 
+	err = Error("k2 %s", err)
+	le, ok = err.(Stringer)
+	a.True(ok).NotNil(le)
+	a.Equal(le.LocaleString(cnp), "cn cn")
+	a.Equal(le.LocaleString(twp), "tw tw")
+	a.Equal(err.Error(), "k2 k1")
+
 	err = Error("not-exists")
 	le, ok = err.(Stringer)
 	a.True(ok).NotNil(le)
 	a.Equal(le.LocaleString(twp), "not-exists")
 
+	// errors.Is
+
 	err1 := Error("k1")
 	a.Equal(Error("k1"), err1)
 	a.ErrorIs(err1, err1)
 	a.ErrorIs(fmt.Errorf("err2 %w", err1), err1)
-	a.False(errors.Is(Error("k1"), Error("k1"))) // 非同一个对象，行为与 errors.New 是相同的
-	a.False(errors.Is(Error("k1 %d", 1), Error("k1 %d", 1)))
-	a.False(errors.Is(Error("k1 %d", 1), Error("k1 %d", 2)))
+	a.False(errors.Is(Error("k1"), Error("k1")))             // 非同一个对象，行为与 errors.New 是相同的
+	a.False(errors.Is(Error("k2 %d", 1), Error("k2 %d", 1))) // 参数相同的非同一对象
+	a.False(errors.Is(Error("k2 %d", 1), Error("k2 %d", 2)))
 	a.False(errors.Is(Error("k1"), errors.New("k1")))
 }
 
