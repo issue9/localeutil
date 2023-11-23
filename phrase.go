@@ -28,7 +28,7 @@ type (
 
 	// StringPhrase 由字符串组成的 [Stringer] 实现
 	//
-	// 与 [Phrase] 不同，StringPhrase 可以是常量，且大部分情况下适用。
+	// 与 [Phrase] 不同，StringPhrase 是常量，且大部分情况下适用。
 	StringPhrase string
 
 	Printer = message.Printer
@@ -81,17 +81,4 @@ func (sp StringPhrase) LocaleString(p *Printer) string {
 		return string(sp)
 	}
 	return p.Sprintf(string(sp))
-}
-
-// ErrorAsLocaleString 尝试将 err 转换为 [Stringer] 类型并输出
-//
-// 如果 err 未实现 [Stringer] 接口，则将调用 [error.Error]。
-//
-// NOTE: 未考虑 err 是否实现 xerrors.FormatError 等情况，
-// 可作为简单的内容输出，正式环境作更多的类型判断。
-func ErrorAsLocaleString(err error, p *Printer) string {
-	if ls, ok := err.(Stringer); ok {
-		return ls.LocaleString(p)
-	}
-	return err.Error()
 }

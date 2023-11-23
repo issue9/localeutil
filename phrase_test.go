@@ -71,16 +71,13 @@ func TestError(t *testing.T) {
 	a.Equal(le.LocaleString(twp), "not-exists")
 
 	err1 := Error("k1")
-	a.True(errors.Is(err1, err1))
-	a.True(errors.Is(fmt.Errorf("err2 %w", err1), err1))
-	a.False(errors.Is(Error("k1"), Error("k1")))
+	a.Equal(Error("k1"), err1)
+	a.ErrorIs(err1, err1)
+	a.ErrorIs(fmt.Errorf("err2 %w", err1), err1)
+	a.False(errors.Is(Error("k1"), Error("k1"))) // 非同一个对象，行为与 errors.New 是相同的
+	a.False(errors.Is(Error("k1 %d", 1), Error("k1 %d", 1)))
+	a.False(errors.Is(Error("k1 %d", 1), Error("k1 %d", 2)))
 	a.False(errors.Is(Error("k1"), errors.New("k1")))
-
-	// ErrorAsLocaleString
-
-	a.Equal(ErrorAsLocaleString(err1, cnp), "cn")
-	a.Equal(ErrorAsLocaleString(err1, twp), "tw")
-	a.Equal(ErrorAsLocaleString(errors.New("k1"), twp), "k1")
 }
 
 func BenchmarkPhrase_LocaleString(b *testing.B) {
