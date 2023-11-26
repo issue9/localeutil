@@ -51,7 +51,7 @@ type Options struct {
 	//
 	// 函数至少需要一个参数，且其第一个参数的类型必须为 string。
 	// 如果指向的是方法，那么在调用此方法的结构必须有明确类型声明，不能由类型推荐获得。
-	// 比如，当 f 为 golang.org/x/text/message.Printer.Printf 时：
+	// 比如，当 p 为 golang.org/x/text/message.Printer.Printf 时：
 	//
 	//	// 以下无法提取内容
 	//	p := message.NewPrinter();
@@ -64,9 +64,8 @@ type Options struct {
 }
 
 type extractor struct {
-	log   message.LogFunc
-	funcs []localeFunc
-	fset  *token.FileSet
+	log  message.LogFunc
+	fset *token.FileSet
 
 	mux sync.Mutex
 	msg []message.Message
@@ -77,20 +76,20 @@ func Extract(ctx context.Context, o *Options) (*message.Language, error) {
 	// NOTE: 有可能存在将 localeutil.Phrase 二次封装的情况，
 	// 为了尽可能多地找到本地化字符串，所以采用用户指定函数的方法。
 
+	// 获取所有需要分析的源码目录
 	dirs, err := getDir(o.Root, o.Recursive, o.SkipSubModule)
 	if err != nil {
 		return nil, err
 	}
 
 	ex := &extractor{
-		log:   o.Log,
-		funcs: split(o.Funcs...),
-		fset:  token.NewFileSet(),
+		log:  o.Log,
+		fset: token.NewFileSet(),
 
 		msg: make([]message.Message, 0, 100),
 	}
 
-	if err := ex.scanDirs(ctx, dirs); err != nil {
+	if err := ex.scanDirs(ctx, dirs, o.Funcs); err != nil {
 		return nil, err
 	}
 
@@ -99,7 +98,7 @@ func Extract(ctx context.Context, o *Options) (*message.Language, error) {
 	return &message.Language{ID: o.Language, Messages: ex.msg}, nil
 }
 
-func (ex *extractor) scanDirs(ctx context.Context, dirs []string) error {
+func (ex *extractor) scanDirs(ctx context.Context, dirs, funcs []string) error {
 	wg := &sync.WaitGroup{}
 	for _, dir := range dirs {
 		entries, err := os.ReadDir(dir)
@@ -127,7 +126,7 @@ func (ex *extractor) scanDirs(ctx context.Context, dirs []string) error {
 						return
 					}
 
-					ex.inspectFile(p, f)
+					ex.inspectFile(p, f, funcs)
 				}(filepath.Join(dir, e.Name()))
 			}
 		}
@@ -145,7 +144,7 @@ func logErr(err error, log message.LogFunc) {
 	log(localeutil.StringPhrase(err.Error()))
 }
 
-func (ex *extractor) inspectFile(p string, f *ast.File) {
+func (ex *extractor) inspectFile(p string, f *ast.File, funcs []string) {
 	const notFound = localeutil.StringPhrase("go.mod not found")
 
 	modPath, err := source.ModPath(p)
@@ -158,7 +157,7 @@ func (ex *extractor) inspectFile(p string, f *ast.File) {
 		return
 	}
 
-	mods := filterImportFuncs(modPath, f.Imports, ex.funcs)
+	mods := filterImportFuncs(modPath, f.Imports, funcs)
 	ast.Inspect(f, func(n ast.Node) bool {
 		switch expr := n.(type) {
 		case *ast.TypeSpec, *ast.ImportSpec:
