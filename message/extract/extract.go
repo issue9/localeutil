@@ -9,7 +9,6 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"log"
 	"os"
 	"path/filepath"
 	"sort"
@@ -122,7 +121,7 @@ func (ex *extractor) scanDirs(ctx context.Context, dirs, funcs []string) error {
 
 					f, err := parser.ParseFile(ex.fset, p, nil, parser.ParseComments)
 					if err != nil {
-						logErr(err, ex.log)
+						ex.logErr(err)
 						return
 					}
 
@@ -136,12 +135,12 @@ func (ex *extractor) scanDirs(ctx context.Context, dirs, funcs []string) error {
 	return nil
 }
 
-func logErr(err error, log message.LogFunc) {
+func (ex *extractor) logErr(err error) {
 	if e, ok := err.(localeutil.Stringer); ok {
-		log(e)
+		ex.log(e)
 		return
 	}
-	log(localeutil.StringPhrase(err.Error()))
+	ex.log(localeutil.StringPhrase(err.Error()))
 }
 
 func (ex *extractor) inspectFile(p string, f *ast.File, funcs []string) {
@@ -153,7 +152,7 @@ func (ex *extractor) inspectFile(p string, f *ast.File, funcs []string) {
 		ex.log(notFound)
 		return
 	case err != nil:
-		logErr(err, ex.log)
+		ex.logErr(err)
 		return
 	}
 
@@ -173,7 +172,7 @@ func (ex *extractor) inspectFile(p string, f *ast.File, funcs []string) {
 
 			if sliceutil.Exists(ex.msg, func(m message.Message, _ int) bool { return m.Key == msg.Key }) {
 				p := ex.fset.Position(expr.Pos())
-				log.Println(localeutil.Phrase("has same key %s at %s:%d, will be ignore", msg.Key, p.Filename, p.Line))
+				ex.log(localeutil.Phrase("has same key %s at %s:%d, will be ignore", msg.Key, p.Filename, p.Line))
 				return true
 			}
 			ex.msg = append(ex.msg, msg)
