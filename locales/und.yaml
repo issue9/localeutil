@@ -1,8 +1,5 @@
 id: und
 messages:
-    - key: go.mod not found
-      message:
-        msg: go.mod not found
     - key: has same key %s at %s:%d, will be ignore
       message:
         msg: has same key %s at %s:%d, will be ignore

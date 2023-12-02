@@ -5,66 +5,29 @@ package extract
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"go/ast"
-	"go/parser"
 	"go/token"
-	"os"
-	"path/filepath"
+	"go/types"
 	"sort"
 	"strings"
 	"sync"
 
 	"github.com/issue9/localeutil"
 	"github.com/issue9/sliceutil"
-	"github.com/issue9/source"
-	"golang.org/x/text/language"
+	"golang.org/x/tools/go/packages"
 
 	"github.com/issue9/localeutil/message"
 )
 
-type Options struct {
-	// Language 提取内容的语言 ID
-	Language language.Tag
-
-	// 读取的根目录
-	//
-	// 需要位于一个 Go 的模块中。
-	Root string
-
-	// 是否读取子目录的内容
-	Recursive bool
-
-	// 忽略子模块
-	//
-	// 当 Recursive 为 true 时，此值为 true，可以不读取子模块的内容。
-	SkipSubModule bool
-
-	// 日志输出通道
-	Log message.LogFunc
-
-	// 用于输出本地化内容的函数列表
-	//
-	// 每个元素的格式为 mod/path[.struct].func，mod/path 为包的导出路径，
-	// struct 为结构体名称，可以省略，func 为函数或方法名。
-	//
-	// 函数至少需要一个参数，且其第一个参数的类型必须为 string。
-	// 如果指向的是方法，那么在调用此方法的结构必须有明确类型声明，不能由类型推荐获得。
-	// 比如，当 p 为 golang.org/x/text/message.Printer.Printf 时：
-	//
-	//	// 以下无法提取内容
-	//	p := message.NewPrinter();
-	//	p.Printf(...)
-	//
-	//	// 以下可以
-	//	var p *message.Printer = message.NewPrinter();
-	//	p.Printf(...)
-	Funcs []string
-}
+const mode = packages.NeedName | packages.NeedFiles | packages.NeedCompiledGoFiles |
+	packages.NeedImports | packages.NeedDeps | packages.NeedModule | packages.NeedExportFile |
+	packages.NeedTypes | packages.NeedTypesSizes | packages.NeedSyntax | packages.NeedTypesInfo
 
 type extractor struct {
-	log  message.LogFunc
-	fset *token.FileSet
+	log   message.LogFunc
+	fset  *token.FileSet
+	funcs []importFunc
 
 	mux sync.Mutex
 	msg []message.Message
@@ -72,23 +35,21 @@ type extractor struct {
 
 // Extract 提取本地化内容
 func Extract(ctx context.Context, o *Options) (*message.Language, error) {
-	// NOTE: 有可能存在将 localeutil.Phrase 二次封装的情况，
-	// 为了尽可能多地找到本地化字符串，所以采用用户指定函数的方法。
+	if o == nil {
+		panic("参数 o 不能为空")
+	}
 
-	// 获取所有需要分析的源码目录
 	dirs, err := getDir(o.Root, o.Recursive, o.SkipSubModule)
 	if err != nil {
 		return nil, err
 	}
 
-	ex := &extractor{
-		log:  o.Log,
-		fset: token.NewFileSet(),
-
-		msg: make([]message.Message, 0, 100),
+	ex, err := o.buildExtractor()
+	if err != nil {
+		return nil, err
 	}
 
-	if err := ex.scanDirs(ctx, dirs, o.Funcs); err != nil {
+	if err := ex.inspectDirs(ctx, dirs); err != nil {
 		return nil, err
 	}
 
@@ -97,170 +58,145 @@ func Extract(ctx context.Context, o *Options) (*message.Language, error) {
 	return &message.Language{ID: o.Language, Messages: ex.msg}, nil
 }
 
-func (ex *extractor) scanDirs(ctx context.Context, dirs, funcs []string) error {
+func (ex *extractor) inspectDirs(ctx context.Context, dirs []string) error {
 	wg := &sync.WaitGroup{}
+	defer wg.Wait()
+
 	for _, dir := range dirs {
-		entries, err := os.ReadDir(dir)
+		cfg := &packages.Config{
+			Mode:    mode,
+			Context: ctx,
+			Dir:     dir,
+			Fset:    ex.fset,
+		}
+		pkgs, err := packages.Load(cfg)
 		if err != nil {
 			return err
 		}
 
-		for _, e := range entries {
-			select {
-			case <-ctx.Done():
-				return context.Canceled
-			default:
-				name := strings.ToLower(e.Name())
-				if e.IsDir() || filepath.Ext(name) != ".go" || strings.HasSuffix(name, "_test.go") {
-					continue
-				}
-
+		for _, pkg := range pkgs {
+			info := pkg.TypesInfo
+			for _, f := range pkg.Syntax {
 				wg.Add(1)
-				go func(p string) {
+				go func(f *ast.File) {
 					defer wg.Done()
-
-					f, err := parser.ParseFile(ex.fset, p, nil, parser.ParseComments)
-					if err != nil {
-						ex.logErr(err)
-						return
-					}
-
-					ex.inspectFile(p, f, funcs)
-				}(filepath.Join(dir, e.Name()))
+					ex.inspectFile(info, f)
+				}(f)
 			}
 		}
 	}
-	wg.Wait()
 
 	return nil
 }
 
-func (ex *extractor) logErr(err error) {
-	if e, ok := err.(localeutil.Stringer); ok {
-		ex.log(e)
-		return
-	}
-	ex.log(localeutil.StringPhrase(err.Error()))
-}
-
-func (ex *extractor) inspectFile(p string, f *ast.File, funcs []string) {
-	const notFound = localeutil.StringPhrase("go.mod not found")
-
-	modPath, err := source.ModPath(p)
-	switch {
-	case errors.Is(err, os.ErrNotExist):
-		ex.log(notFound)
-		return
-	case err != nil:
-		ex.logErr(err)
-		return
-	}
-
-	mods := filterImportFuncs(modPath, f.Imports, funcs)
+func (ex *extractor) inspectFile(info *types.Info, f *ast.File) {
 	ast.Inspect(f, func(n ast.Node) bool {
 		switch expr := n.(type) {
 		case *ast.TypeSpec, *ast.ImportSpec:
 			return false
 		case *ast.CallExpr:
-			msg := ex.inspect(expr, mods)
-			if msg.Key == "" {
-				return true
-			}
-
-			ex.mux.Lock()
-			defer ex.mux.Unlock()
-
-			if sliceutil.Exists(ex.msg, func(m message.Message, _ int) bool { return m.Key == msg.Key }) {
-				p := ex.fset.Position(expr.Pos())
-				ex.log(localeutil.Phrase("has same key %s at %s:%d, will be ignore", msg.Key, p.Filename, p.Line))
-				return true
-			}
-			ex.msg = append(ex.msg, msg)
-			return false
+			return ex.inspect(expr, info)
+		default:
+			return true
 		}
-		return true
 	})
 }
 
-func (ex *extractor) inspect(expr *ast.CallExpr, mods []importFunc) message.Message {
-	msg := message.Message{}
-	var modName, structName, name string
+// 遍历 expr 表达式
+//
+// 返回值表示是否需要访问子元素
+func (ex *extractor) inspect(expr *ast.CallExpr, info *types.Info) bool {
+	var pkgName, structName, name string
 
 	switch f := expr.Fun.(type) {
 	case *ast.SelectorExpr:
 		switch ft := f.X.(type) {
-		case *ast.CallExpr: // localeutil.Phrase(xxx).LocaleString(p)
-			return ex.inspect(ft, mods)
-		case *ast.Ident:
-			if ft.Obj != nil {
-				modName, structName = ex.getObjectName(ft.Obj)
-			} else {
-				modName = ft.Name
+		case *ast.CallExpr: // path.call(xxx).LocaleString(p)
+			return ex.inspect(ft, info)
+		case *ast.Ident: // path.call(xxx) 或是 path.Type.call(xxx) 或是 Type.call(xxx)
+			obj := info.ObjectOf(ft)
+			switch o := obj.(type) {
+			case *types.PkgName:
+				pkgName = o.Imported().Path()
+			case *types.TypeName:
+				pkgName = o.Pkg().Path()
+				structName = o.Name()
+			case *types.Var:
+				pkgName, structName = getTypeName(o.Type().String())
+			default: // 其它可能类型：Const, Func, Nil
+				panic(fmt.Sprintf("未正确处理 %T 类型的对象", o))
+
 			}
+
 			name = f.Sel.Name
 		default:
-			return msg
+			return true
 		}
-	case *ast.Ident:
+	case *ast.Ident: // call(xxx) 当前包的方法
+		pkgName = info.ObjectOf(f).Pkg().Path()
 		name = f.Name
 	}
 
-	exists := sliceutil.Exists(mods, func(m importFunc, _ int) bool {
-		ok := m.name == name && modName == m.modName
-		if structName != "" {
-			ok = ok && structName == m.structName
-		}
+	// 查找 expr 是否属于 ex.funcs
 
-		return ok
+	exists := sliceutil.Exists(ex.funcs, func(m importFunc, _ int) bool {
+		return m.name == name && pkgName == m.pkgName && structName == m.structName
 	})
 	if !exists {
-		return msg
+		return true
 	}
 
+	ex.appendMsg(expr)
+	return false
+}
+
+func (ex *extractor) appendMsg(expr *ast.CallExpr) {
 	var key string
 	switch v := expr.Args[0].(type) {
-	case *ast.BasicLit:
+	case *ast.BasicLit: // 直接参数，比如 call("xxx")
 		key = v.Value
-	case *ast.Ident: // const / var
+	case *ast.Ident: // 间接参数，比如：const xxx; call(xxx) 或是 var xxx; call(xxx)
 		switch d := v.Obj.Decl.(type) {
 		case *ast.ValueSpec:
-			if d.Names != nil && d.Names[0].Obj.Kind == ast.Con {
+			if d.Names != nil && d.Names[0].Obj.Kind == ast.Con { // 常量，可获得值
 				key = d.Values[0].(*ast.BasicLit).Value
-			} else {
+			} else { // 变量，编译时无法获得
 				ex.log(localeutil.Phrase("the type %s can not covert to message", d.Names[0].Obj.Kind))
 			}
 		}
 	}
 
+	if key != "" {
+		key = key[1 : len(key)-1]
+	}
 	if key == "" {
-		return msg
+		return
 	}
-	key = key[1 : len(key)-1]
-	msg.Key = key
-	msg.Message.Msg = key
-	return msg
+
+	ex.mux.Lock()
+	defer ex.mux.Unlock()
+
+	if sliceutil.Exists(ex.msg, func(m message.Message, _ int) bool { return m.Key == key }) {
+		p := ex.fset.Position(expr.Pos())
+		ex.log(localeutil.Phrase("has same key %s at %s:%d, will be ignore", key, p.Filename, p.Line))
+		return
+	}
+	ex.msg = append(ex.msg, message.Message{Key: key, Message: message.Text{Msg: key}})
 }
 
-func (ex *extractor) getObjectName(obj *ast.Object) (modName, structName string) {
-	switch decl := obj.Decl.(type) {
-	case *ast.ValueSpec: // 局部变量/全局变量
-		if decl.Type != nil {
-			return getExprNames(decl.Type)
-		}
-	case *ast.Field: // 函数参数
-		return getExprNames(decl.Type)
+func getTypeName(t string) (pkg, structure string) {
+	if t[0] == '*' {
+		t = t[1:]
 	}
-	return "", ""
-}
 
-func getExprNames(expr ast.Expr) (modName, structName string) {
-	switch s := expr.(type) {
-	case *ast.SelectorExpr:
-		return s.X.(*ast.Ident).Name, s.Sel.Name
-	case *ast.Ident:
-		return "", s.Name
-	case *ast.StarExpr:
-		return getExprNames(s.X)
+	if index := strings.LastIndexByte(t, '['); index >= 0 {
+		t = t[:index]
 	}
-	return "", ""
+
+	if index := strings.LastIndexByte(t, '.'); index >= 0 {
+		pkg = t[:index]
+		t = t[index+1:]
+	}
+
+	return pkg, t
 }

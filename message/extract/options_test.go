@@ -26,3 +26,18 @@ func TestGetDirs(t *testing.T) {
 	dirs, err = getDir("./testdata", true, true)
 	a.NotError(err).Length(dirs, 2)
 }
+
+func TestSplit(t *testing.T) {
+	a := assert.New(t, false)
+
+	fns := split("github.com/issue9/localeutil.Phrase", "github.com/issue9/localeutil.Error", "github.com/issue9/localeutil.Struct.Printf")
+	a.Equal(fns, []importFunc{
+		{pkgName: "github.com/issue9/localeutil", name: "Phrase"},
+		{pkgName: "github.com/issue9/localeutil", name: "Error"},
+		{pkgName: "github.com/issue9/localeutil", name: "Printf", structName: "Struct"},
+	})
+
+	a.PanicString(func() {
+		split("github.com/issue9")
+	}, "github.com/issue9 格式无效")
+}

@@ -10,25 +10,27 @@ import (
 	"github.com/issue9/assert/v3"
 	"github.com/issue9/sliceutil"
 	"golang.org/x/text/language"
-	xm "golang.org/x/text/message"
-	"golang.org/x/text/message/catalog"
 
 	"github.com/issue9/localeutil"
 	"github.com/issue9/localeutil/message"
 )
 
-func TestExtract(t *testing.T) {
+func TestExtract_LocaleType(t *testing.T) {
 	a := assert.New(t, false)
-	b := catalog.NewBuilder()
-	p := xm.NewPrinter(language.SimplifiedChinese, xm.Catalog(b))
-	log := func(v localeutil.Stringer) { log.Print(v.LocaleString(p)) }
+	log := func(v localeutil.Stringer) { log.Print(v.LocaleString(nil)) }
 
 	o := &Options{
 		Language:  language.MustParse("zh-CN"),
-		Root:      "./testdata",
+		Root:      "./testdata/locale",
 		Recursive: true,
 		Log:       log,
-		Funcs:     []string{"github.com/issue9/localeutil.Phrase"},
+		Funcs: []string{
+			"github.com/issue9/localeutil/testdata/locale.String",
+			"github.com/issue9/localeutil/testdata/locale.Print",
+			"github.com/issue9/localeutil/testdata/locale.GPrinter.GPrint",
+			"github.com/issue9/localeutil/testdata/locale.Printer.Print",
+			"github.com/issue9/localeutil/testdata/locale.Interface.Printf",
+		},
 	}
 	l, err := Extract(context.Background(), o)
 	a.NotError(err).NotNil(l).
@@ -37,8 +39,29 @@ func TestExtract(t *testing.T) {
 	m := l.Messages
 	a.NotNil(m).
 		Length(sliceutil.Dup(m, func(m1, m2 message.Message) bool { return m1.Key == m2.Key }), 0). // 没有重复值
-		Length(m, 5).
-		Equal(m[0].Key, "const-value")
+		Length(m, 13)
+
+	for _, mm := range m {
+		t.Log(mm.Key)
+	}
+}
+
+func TestExtract(t *testing.T) {
+	a := assert.New(t, false)
+	log := func(v localeutil.Stringer) { log.Print(v.LocaleString(nil)) }
+
+	o := &Options{
+		Root:  "./testdata",
+		Log:   log,
+		Funcs: []string{"github.com/issue9/localeutil.Phrase"},
+	}
+	l, err := Extract(context.Background(), o)
+	a.NotError(err).NotNil(l)
+
+	m := l.Messages
+	a.NotNil(m).
+		Length(sliceutil.Dup(m, func(m1, m2 message.Message) bool { return m1.Key == m2.Key }), 0). // 没有重复值
+		Length(m, 5)
 
 	for _, mm := range m {
 		t.Log(mm.Key)
@@ -47,7 +70,6 @@ func TestExtract(t *testing.T) {
 	// 添加了 localeutil.Error 和 localeutil.StringPhrase
 
 	o = &Options{
-		Language:  language.MustParse("zh-CN"),
 		Root:      "./testdata",
 		Recursive: true,
 		Log:       log,
@@ -59,22 +81,20 @@ func TestExtract(t *testing.T) {
 	}
 	l, err = Extract(context.Background(), o)
 	a.NotError(err).NotNil(l).
-		NotNil(l).
-		Equal(l.ID.String(), "zh-CN")
+		NotNil(l)
 
 	m = l.Messages
 	a.NotNil(m).
 		Length(sliceutil.Dup(m, func(m1, m2 message.Message) bool { return m1.Key == m2.Key }), 0). // 没有重复值
-		Length(m, 9)
+		Length(m, 8)
 
 	for _, mm := range m {
 		t.Log(mm.Key)
 	}
 
-	// 添加了 text/message.Printer.Printf
+	// 添加了 locale.Printer.Print
 
 	o = &Options{
-		Language:  language.MustParse("zh-CN"),
 		Root:      "./testdata",
 		Recursive: true,
 		Log:       log,
@@ -82,48 +102,37 @@ func TestExtract(t *testing.T) {
 			"github.com/issue9/localeutil.Phrase",
 			"github.com/issue9/localeutil.Error",
 			"github.com/issue9/localeutil.StringPhrase",
-			"golang.org/x/text/message.Printer.Printf",
+			"github.com/issue9/localeutil/testdata/locale.String",
 		},
 	}
 	l, err = Extract(context.Background(), o)
 	a.NotError(err).NotNil(l).
-		NotNil(l).
-		Equal(l.ID.String(), "zh-CN")
+		NotNil(l)
 
 	m = l.Messages
 	a.NotNil(m).
-		Length(m, 12)
+		Length(m, 10)
 
 	for _, mm := range m {
 		t.Log(mm.Key)
 	}
+}
 
-	// 测试本地的函数和对象
+func TestGetTypeName(t *testing.T) {
+	a := assert.New(t, false)
 
-	o = &Options{
-		Language:  language.MustParse("zh-CN"),
-		Root:      "./testdata",
-		Recursive: true,
-		Log:       log,
-		Funcs: []string{
-			"github.com/issue9/localeutil.Phrase",
-			"github.com/issue9/localeutil.Error",
-			"github.com/issue9/localeutil.StringPhrase",
-			"golang.org/x/text/message.Printer.Printf",
-			"github.com/issue9/localeutil/testdata.Printer.Print",
-			"github.com/issue9/localeutil/testdata.Print",
-		},
-	}
-	l, err = Extract(context.Background(), o)
-	a.NotError(err).NotNil(l).
-		NotNil(l).
-		Equal(l.ID.String(), "zh-CN")
+	p, s := getTypeName("t")
+	a.Empty(p).Equal(s, "t")
 
-	m = l.Messages
-	a.NotNil(m).
-		Length(m, 14)
+	p, s = getTypeName("*github.com/issue9/abc.t")
+	a.Equal(p, "github.com/issue9/abc").Equal(s, "t")
 
-	for _, mm := range m {
-		t.Log(mm.Key)
-	}
+	p, s = getTypeName("github.com/issue9/abc.t[int]")
+	a.Equal(p, "github.com/issue9/abc").Equal(s, "t")
+
+	p, s = getTypeName("*github.com/issue9/abc.t[github.com/issue9/abc.Type]")
+	a.Equal(p, "github.com/issue9/abc").Equal(s, "t")
+
+	p, s = getTypeName("github.com/issue9/abc.t[github.com/issue9/abc.Type]")
+	a.Equal(p, "github.com/issue9/abc").Equal(s, "t")
 }

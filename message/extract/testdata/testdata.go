@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"github.com/issue9/localeutil"
-	l "github.com/issue9/localeutil" // 为包指定别名
+	"github.com/issue9/localeutil/testdata/locale"
 )
 
 const c1 = localeutil.StringPhrase("c1")
@@ -14,15 +14,15 @@ const c1 = localeutil.StringPhrase("c1")
 const constValue = "const-value"
 
 var (
-	_ = localeutil.StringPhrase("c2")
-	_ = l.Phrase(constValue)
+	_ = locale.String("c2")
+	_ = localeutil.Phrase(constValue)
 
-	_ = l.Phrase("p1")
-	_ = localeutil.Phrase("p1") // 同值，应该忽略
-	_ = localeutil.Phrase("p1 %s", "str")
+	_ = localeutil.Phrase("phrase 1")
+	_ = localeutil.Phrase("phrase 1") // 同值，应该忽略
+	_ = localeutil.Phrase("phrase %d", "2")
 
-	_ = localeutil.Error("e1")
-	_ = localeutil.Error("e1 %s:%d", "str", 5)
+	_ = localeutil.Error("error 1")
+	_ = localeutil.Error("error %d", 5)
 )
 
 func f1() {

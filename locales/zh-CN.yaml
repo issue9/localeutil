@@ -1,8 +1,5 @@
 id: zh-CN
 messages:
-    - key: go.mod not found
-      message:
-        msg: 未找到 go.mod 文件
     - key: has same key %s at %s:%d, will be ignore
       message:
         msg: 在 %[2]s:%[3]d 有相同的翻译项 %[1]s，将会被忽略！
