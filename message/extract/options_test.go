@@ -18,23 +18,23 @@ func TestGetDirs(t *testing.T) {
 	a.NotError(err).Length(dirs, 1)
 
 	dirs, err = getDir("./", true, false)
-	a.NotError(err).Length(dirs, 3, "%+v", dirs)
+	a.NotError(err).Length(dirs, 4, "%+v", dirs)
 
 	dirs, err = getDir("./", true, true)
 	a.NotError(err).Length(dirs, 1)
 
 	dirs, err = getDir("./testdata", true, true)
-	a.NotError(err).Length(dirs, 2)
+	a.NotError(err).Length(dirs, 3)
 }
 
 func TestSplit(t *testing.T) {
 	a := assert.New(t, false)
 
 	fns := split("github.com/issue9/localeutil.Phrase", "github.com/issue9/localeutil.Error", "github.com/issue9/localeutil.Struct.Printf")
-	a.Equal(fns, []importFunc{
+	a.Equal(fns, []fn{
 		{pkgName: "github.com/issue9/localeutil", name: "Phrase"},
 		{pkgName: "github.com/issue9/localeutil", name: "Error"},
-		{pkgName: "github.com/issue9/localeutil", name: "Printf", structName: "Struct"},
+		{pkgName: "github.com/issue9/localeutil", name: "Printf", typeName: "Struct"},
 	})
 
 	a.PanicString(func() {

@@ -27,13 +27,15 @@ const mode = packages.NeedName | packages.NeedFiles | packages.NeedCompiledGoFil
 type extractor struct {
 	log   message.LogFunc
 	fset  *token.FileSet
-	funcs []importFunc
+	funcs []fn
 
 	mux sync.Mutex
 	msg []message.Message
 }
 
 // Extract 提取本地化内容
+//
+// o 给定的参数错误，可能会触发 panic，比如 o 为空、o.Funcs 格式错误等。
 func Extract(ctx context.Context, o *Options) (*message.Language, error) {
 	if o == nil {
 		panic("参数 o 不能为空")
@@ -106,8 +108,6 @@ func (ex *extractor) inspectFile(info *types.Info, f *ast.File) {
 //
 // 返回值表示是否需要访问子元素
 func (ex *extractor) inspect(expr *ast.CallExpr, info *types.Info) bool {
-	var pkgName, structName, name string
-
 	switch f := expr.Fun.(type) {
 	case *ast.SelectorExpr:
 		switch ft := f.X.(type) {
@@ -115,32 +115,65 @@ func (ex *extractor) inspect(expr *ast.CallExpr, info *types.Info) bool {
 			return ex.inspect(ft, info)
 		case *ast.Ident: // path.call(xxx) 或是 path.Type.call(xxx) 或是 Type.call(xxx)
 			obj := info.ObjectOf(ft)
-			switch o := obj.(type) {
-			case *types.PkgName:
-				pkgName = o.Imported().Path()
-			case *types.TypeName:
-				pkgName = o.Pkg().Path()
-				structName = o.Name()
-			case *types.Var:
-				pkgName, structName = getTypeName(o.Type().String())
-			default: // 其它可能类型：Const, Func, Nil
-				panic(fmt.Sprintf("未正确处理 %T 类型的对象", o))
-
+			if obj == nil {
+				break
 			}
 
-			name = f.Sel.Name
+			switch o := obj.(type) {
+			case *types.PkgName:
+				if t := info.ObjectOf(f.Sel); t != nil { // 可能指向其它包的别名
+					if tn, ok := t.(*types.TypeName); ok && tn.IsAlias() {
+						pkgName, structName := getTypeName(tn.Type().String())
+						if !ex.tryAppendMsg(expr, pkgName, "", structName) {
+							return false
+						}
+					}
+				}
+
+				pkgName := o.Imported().Path()
+				return ex.tryAppendMsg(expr, pkgName, "", f.Sel.Name)
+			case *types.TypeName:
+				if o.IsAlias() { // 别名状态，还需要状态原来的值。
+					pkgName, structName := getTypeName(o.Id())
+					if !ex.tryAppendMsg(expr, pkgName, structName, f.Sel.Name) {
+						return false
+					}
+				}
+
+				pkgName, structName := getTypeName(o.Type().String())
+				return ex.tryAppendMsg(expr, pkgName, structName, f.Sel.Name)
+			case *types.Var, *types.Const, *types.Nil:
+				pkgName, structName := getTypeName(o.Type().String())
+				return ex.tryAppendMsg(expr, pkgName, structName, f.Sel.Name)
+			default: // 其它可能类型：Func
+				pos := ex.fset.Position(ft.Pos())
+				panic(fmt.Sprintf("未正确处理 %T 类型的对象,位于 %s", o, pos))
+			}
 		default:
 			return true
 		}
-	case *ast.Ident: // call(xxx) 当前包的方法
-		pkgName = info.ObjectOf(f).Pkg().Path()
-		name = f.Name
+	case *ast.Ident: // call(xxx) 调用当前包中的函数或是类型转换，肯定不会有结构体相关联。
+		if obj := info.ObjectOf(f); obj != nil {
+			if tn, ok := obj.(*types.TypeName); ok && tn.IsAlias() {
+				pkgName, structName := getTypeName(tn.Type().String())
+				if !ex.tryAppendMsg(expr, pkgName, "", structName) {
+					return false
+				}
+			}
+
+			var pkgName string
+			if pkg := obj.Pkg(); pkg != nil {
+				pkgName = pkg.Path()
+			}
+			return ex.tryAppendMsg(expr, pkgName, "", f.Name)
+		}
 	}
+	return true
+}
 
-	// 查找 expr 是否属于 ex.funcs
-
-	exists := sliceutil.Exists(ex.funcs, func(m importFunc, _ int) bool {
-		return m.name == name && pkgName == m.pkgName && structName == m.structName
+func (ex *extractor) tryAppendMsg(expr *ast.CallExpr, pkgName, structName, name string) (continueInspect bool) {
+	exists := sliceutil.Exists(ex.funcs, func(m fn, _ int) bool {
+		return m.name == name && pkgName == m.pkgName && structName == m.typeName
 	})
 	if !exists {
 		return true

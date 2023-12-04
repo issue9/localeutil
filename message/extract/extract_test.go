@@ -61,13 +61,13 @@ func TestExtract(t *testing.T) {
 	m := l.Messages
 	a.NotNil(m).
 		Length(sliceutil.Dup(m, func(m1, m2 message.Message) bool { return m1.Key == m2.Key }), 0). // 没有重复值
-		Length(m, 5)
+		Length(m, 4)
 
 	for _, mm := range m {
 		t.Log(mm.Key)
 	}
 
-	// 添加了 localeutil.Error 和 localeutil.StringPhrase
+	// 添加了 localeutil.Error 和 localeutil.StringPhrase，
 
 	o = &Options{
 		Root:      "./testdata",
@@ -77,6 +77,7 @@ func TestExtract(t *testing.T) {
 			"github.com/issue9/localeutil.Phrase",
 			"github.com/issue9/localeutil.Error",
 			"github.com/issue9/localeutil.StringPhrase",
+			//"github.com/issue9/localeutil/testdata.String", // 别名，指向 localeutil.StringPhrase
 		},
 	}
 	l, err = Extract(context.Background(), o)
@@ -86,7 +87,7 @@ func TestExtract(t *testing.T) {
 	m = l.Messages
 	a.NotNil(m).
 		Length(sliceutil.Dup(m, func(m1, m2 message.Message) bool { return m1.Key == m2.Key }), 0). // 没有重复值
-		Length(m, 8)
+		Length(m, 9)
 
 	for _, mm := range m {
 		t.Log(mm.Key)
@@ -102,7 +103,8 @@ func TestExtract(t *testing.T) {
 			"github.com/issue9/localeutil.Phrase",
 			"github.com/issue9/localeutil.Error",
 			"github.com/issue9/localeutil.StringPhrase",
-			"github.com/issue9/localeutil/testdata/locale.String",
+			"github.com/issue9/localeutil/testdata/locale.String",        // 别名，ref.String 指向此值
+			"github.com/issue9/localeutil/testdata/locale.Printer.Print", // ref.Printer 指向此值
 		},
 	}
 	l, err = Extract(context.Background(), o)
@@ -111,7 +113,7 @@ func TestExtract(t *testing.T) {
 
 	m = l.Messages
 	a.NotNil(m).
-		Length(m, 10)
+		Length(m, 17)
 
 	for _, mm := range m {
 		t.Log(mm.Key)

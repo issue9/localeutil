@@ -7,11 +7,20 @@ import (
 
 	"github.com/issue9/localeutil"
 	"github.com/issue9/localeutil/testdata/locale"
+	"github.com/issue9/localeutil/testdata/ref"
 )
+
+type String = localeutil.StringPhrase
 
 const c1 = localeutil.StringPhrase("c1")
 
+const c3 = String("c3")
+
+const c4 = ref.String("c4")
+
 const constValue = "const-value"
+
+var p1 = &ref.Printer{}
 
 var (
 	_ = locale.String("c2")
@@ -23,10 +32,12 @@ var (
 
 	_ = localeutil.Error("error 1")
 	_ = localeutil.Error("error %d", 5)
+
+	_ = p1.Print("testdata.Print")
 )
 
 func f1() {
-	fmt.Println(localeutil.Phrase("f1").LocaleString(nil))
+	fmt.Println(localeutil.StringPhrase("f1").LocaleString(nil))
 	fmt.Println(localeutil.Phrase("f1 %d", 5).LocaleString(nil))
 
 	// 变量，无法提取

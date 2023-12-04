@@ -39,13 +39,25 @@ type Options struct {
 	// 默认为输出到终端。
 	Log message.LogFunc
 
-	// 用于输出本地化内容的函数列表
+	// 用于提取本地化内容的函数列表
 	//
-	// 每个元素的格式为 mod/path[.struct].func，mod/path 为包的导出路径，
-	// struct 为结构体名称，可以省略，func 为函数或方法名或是类型。
+	// 每个元素的格式为：
+	//  mod/path[.type].func
 	//
+	// mod/path 为包的导出路径；
+	//
+	// type 为类型名称，可以省略；
+	//
+	// func 为用于实现本地化的调用，可能是与 type 关联的方法
+	// 或是无 type 的函数还有可能是简单的类型转换。
 	// func 至少需要一个参数，且其第一个参数的类型必须为 string。
-	// 如果指定的是接口类型的方法，必须明确类型与接口相同的对象才会提取内容：
+	//
+	// 能正确识别别名，比如：
+	//  type x = localeutil.Printer
+	// 当在 Funcs 指定了 github.com/issue9/localeutil.Printer 时，也会识别 x。
+	//
+	// 如果指定的是接口类型的方法，在提取时不会主动判断是否实现了该接口，
+	// 必须在代码中明确为该接口类型的方法才会被提取：
 	//  var p PrinterInterface = &Printer{}
 	//  p.Printf(...) // 正常提取内容
 	//  var p = &Printer{}
@@ -56,10 +68,10 @@ type Options struct {
 }
 
 // [Options.Funcs] 转换后的表示
-type importFunc struct {
-	pkgName    string // 包名
-	structName string // 类型名，可能为空
-	name       string // 函数名
+type fn struct {
+	pkgName  string // 包名
+	typeName string // 类型名，可能为空
+	name     string // 函数名
 }
 
 func (o *Options) buildExtractor() (*extractor, error) {
@@ -107,17 +119,17 @@ func getDir(root string, r, skip bool) ([]string, error) {
 }
 
 // 返回从 [Options.Funcs] 中分析而来的中间数据
-// 此时返回元素中的 modName 表示的是完整的模块导出山路径。
-func split(funcs ...string) []importFunc {
-	ret := make([]importFunc, 0, len(funcs))
+// 此时返回元素中的 pkgName 表示的是完整的模块导出山路径。
+func split(funcs ...string) []fn {
+	ret := make([]fn, 0, len(funcs))
 	for _, f := range funcs {
 		base := path.Base(f)
 		dir := path.Dir(f)
 		switch strs := strings.Split(base, "."); len(strs) {
 		case 2:
-			ret = append(ret, importFunc{pkgName: path.Join(dir, strs[0]), name: strs[1]})
+			ret = append(ret, fn{pkgName: path.Join(dir, strs[0]), name: strs[1]})
 		case 3:
-			ret = append(ret, importFunc{pkgName: path.Join(dir, strs[0]), structName: strs[1], name: strs[2]})
+			ret = append(ret, fn{pkgName: path.Join(dir, strs[0]), typeName: strs[1], name: strs[2]})
 		default:
 			panic(fmt.Sprintf("%s 格式无效", f))
 		}
