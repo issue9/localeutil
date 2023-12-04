@@ -9,9 +9,11 @@ import (
 	"go/ast"
 	"go/token"
 	"go/types"
+	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/issue9/localeutil"
 	"github.com/issue9/sliceutil"
@@ -21,13 +23,15 @@ import (
 )
 
 const mode = packages.NeedName | packages.NeedFiles | packages.NeedCompiledGoFiles |
-	packages.NeedImports | packages.NeedDeps | packages.NeedModule | packages.NeedExportFile |
-	packages.NeedTypes | packages.NeedTypesSizes | packages.NeedSyntax | packages.NeedTypesInfo
+	packages.NeedImports | packages.NeedDeps | packages.NeedModule |
+	packages.NeedTypes | packages.NeedSyntax | packages.NeedTypesInfo
 
 type extractor struct {
-	log   message.LogFunc
-	fset  *token.FileSet
-	funcs []fn
+	warnLog message.LogFunc
+	infoLog message.LogFunc
+	fset    *token.FileSet
+	funcs   []fn
+	root    string
 
 	mux sync.Mutex
 	msg []message.Message
@@ -41,12 +45,12 @@ func Extract(ctx context.Context, o *Options) (*message.Language, error) {
 		panic("参数 o 不能为空")
 	}
 
-	dirs, err := getDir(o.Root, o.Recursive, o.SkipSubModule)
+	ex, err := o.buildExtractor()
 	if err != nil {
 		return nil, err
 	}
 
-	ex, err := o.buildExtractor()
+	dirs, err := getDir(ex.root, o.Recursive, o.SkipSubModule)
 	if err != nil {
 		return nil, err
 	}
@@ -60,30 +64,45 @@ func Extract(ctx context.Context, o *Options) (*message.Language, error) {
 	return &message.Language{ID: o.Language, Messages: ex.msg}, nil
 }
 
+func (ex *extractor) info(msg localeutil.Stringer) {
+	if ex.infoLog != nil {
+		ex.infoLog(msg)
+	}
+}
+
 func (ex *extractor) inspectDirs(ctx context.Context, dirs []string) error {
 	wg := &sync.WaitGroup{}
 	defer wg.Wait()
 
 	for _, dir := range dirs {
-		cfg := &packages.Config{
-			Mode:    mode,
-			Context: ctx,
-			Dir:     dir,
-			Fset:    ex.fset,
-		}
-		pkgs, err := packages.Load(cfg)
-		if err != nil {
-			return err
-		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+			path := ex.trimPath(dir)
+			ex.info(localeutil.Phrase("parse dir %s", path))
+			start := time.Now()
+			cfg := &packages.Config{
+				Mode:    mode,
+				Context: ctx,
+				Dir:     dir,
+				Fset:    ex.fset,
+			}
+			pkgs, err := packages.Load(cfg)
+			if err != nil {
+				return err
+			}
+			ex.info(localeutil.Phrase("parse dir %s complete, elapsed %s", path, time.Since(start)))
 
-		for _, pkg := range pkgs {
-			info := pkg.TypesInfo
-			for _, f := range pkg.Syntax {
-				wg.Add(1)
-				go func(f *ast.File) {
-					defer wg.Done()
-					ex.inspectFile(info, f)
-				}(f)
+			for _, pkg := range pkgs {
+				info := pkg.TypesInfo
+				for _, f := range pkg.Syntax {
+					wg.Add(1)
+					go func(f *ast.File) {
+						defer wg.Done()
+						ex.inspectFile(info, f)
+					}(f)
+				}
 			}
 		}
 	}
@@ -132,16 +151,6 @@ func (ex *extractor) inspect(expr *ast.CallExpr, info *types.Info) bool {
 
 				pkgName := o.Imported().Path()
 				return ex.tryAppendMsg(expr, pkgName, "", f.Sel.Name)
-			case *types.TypeName:
-				if o.IsAlias() { // 别名状态，还需要状态原来的值。
-					pkgName, structName := getTypeName(o.Id())
-					if !ex.tryAppendMsg(expr, pkgName, structName, f.Sel.Name) {
-						return false
-					}
-				}
-
-				pkgName, structName := getTypeName(o.Type().String())
-				return ex.tryAppendMsg(expr, pkgName, structName, f.Sel.Name)
 			case *types.Var, *types.Const, *types.Nil:
 				pkgName, structName := getTypeName(o.Type().String())
 				return ex.tryAppendMsg(expr, pkgName, structName, f.Sel.Name)
@@ -194,7 +203,7 @@ func (ex *extractor) appendMsg(expr *ast.CallExpr) {
 			if d.Names != nil && d.Names[0].Obj.Kind == ast.Con { // 常量，可获得值
 				key = d.Values[0].(*ast.BasicLit).Value
 			} else { // 变量，编译时无法获得
-				ex.log(localeutil.Phrase("the type %s can not covert to message", d.Names[0].Obj.Kind))
+				ex.warnLog(localeutil.Phrase("the type %s can not covert to message", d.Names[0].Obj.Kind))
 			}
 		}
 	}
@@ -211,7 +220,8 @@ func (ex *extractor) appendMsg(expr *ast.CallExpr) {
 
 	if sliceutil.Exists(ex.msg, func(m message.Message, _ int) bool { return m.Key == key }) {
 		p := ex.fset.Position(expr.Pos())
-		ex.log(localeutil.Phrase("has same key %s at %s:%d, will be ignore", key, p.Filename, p.Line))
+		path := ex.trimPath(p.Filename)
+		ex.warnLog(localeutil.Phrase("has same key %s at %s:%d, will be ignore", key, path, p.Line))
 		return
 	}
 	ex.msg = append(ex.msg, message.Message{Key: key, Message: message.Text{Msg: key}})
@@ -232,4 +242,15 @@ func getTypeName(t string) (pkg, structure string) {
 	}
 
 	return pkg, t
+}
+
+func (ex *extractor) trimPath(p string) string {
+	path := strings.TrimPrefix(p, ex.root) // 只显示相对于检测目录的路径
+	if path != "" && (path[0] == '/' || path[0] == filepath.Separator) {
+		path = path[1:]
+	}
+	if path == "" {
+		return "./"
+	}
+	return path
 }

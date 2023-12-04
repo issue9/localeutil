@@ -37,7 +37,12 @@ type Options struct {
 	// 警告日志通道
 	//
 	// 默认为输出到终端。
-	Log message.LogFunc
+	WarnLog message.LogFunc
+
+	// 普通信息日志通道
+	//
+	// 主要报告提取的进度，如果为空，则不输出内容。
+	InfoLog message.LogFunc
 
 	// 用于提取本地化内容的函数列表
 	//
@@ -75,14 +80,22 @@ type fn struct {
 }
 
 func (o *Options) buildExtractor() (*extractor, error) {
-	if o.Log == nil {
-		o.Log = func(v localeutil.Stringer) { fmt.Print(v) }
+	if o.WarnLog == nil {
+		o.WarnLog = func(v localeutil.Stringer) { fmt.Print(v) }
 	}
 
+	abs, err := filepath.Abs(o.Root)
+	if err != nil {
+		return nil, err
+	}
+	o.Root = abs
+
 	return &extractor{
-		log:   o.Log,
-		fset:  token.NewFileSet(),
-		funcs: split(o.Funcs...),
+		warnLog: o.WarnLog,
+		infoLog: o.InfoLog,
+		fset:    token.NewFileSet(),
+		funcs:   split(o.Funcs...),
+		root:    abs,
 
 		msg: make([]message.Message, 0, 100),
 	}, nil

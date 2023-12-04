@@ -15,15 +15,18 @@ import (
 	"github.com/issue9/localeutil/message"
 )
 
-func TestExtract_LocaleType(t *testing.T) {
+func TestExtract(t *testing.T) {
 	a := assert.New(t, false)
 	log := func(v localeutil.Stringer) { log.Print(v.LocaleString(nil)) }
+
+	// 全部是本地对象
 
 	o := &Options{
 		Language:  language.MustParse("zh-CN"),
 		Root:      "./testdata/locale",
 		Recursive: true,
-		Log:       log,
+		WarnLog:   log,
+		InfoLog:   log,
 		Funcs: []string{
 			"github.com/issue9/localeutil/testdata/locale.String",
 			"github.com/issue9/localeutil/testdata/locale.Print",
@@ -44,21 +47,18 @@ func TestExtract_LocaleType(t *testing.T) {
 	for _, mm := range m {
 		t.Log(mm.Key)
 	}
-}
 
-func TestExtract(t *testing.T) {
-	a := assert.New(t, false)
-	log := func(v localeutil.Stringer) { log.Print(v.LocaleString(nil)) }
+	// 单个 localeutil.Phrase
 
-	o := &Options{
-		Root:  "./testdata",
-		Log:   log,
-		Funcs: []string{"github.com/issue9/localeutil.Phrase"},
+	o = &Options{
+		Root:    "./testdata",
+		WarnLog: log,
+		Funcs:   []string{"github.com/issue9/localeutil.Phrase"},
 	}
-	l, err := Extract(context.Background(), o)
+	l, err = Extract(context.Background(), o)
 	a.NotError(err).NotNil(l)
 
-	m := l.Messages
+	m = l.Messages
 	a.NotNil(m).
 		Length(sliceutil.Dup(m, func(m1, m2 message.Message) bool { return m1.Key == m2.Key }), 0). // 没有重复值
 		Length(m, 4)
@@ -72,7 +72,7 @@ func TestExtract(t *testing.T) {
 	o = &Options{
 		Root:      "./testdata",
 		Recursive: true,
-		Log:       log,
+		WarnLog:   log,
 		Funcs: []string{
 			"github.com/issue9/localeutil.Phrase",
 			"github.com/issue9/localeutil.Error",
@@ -98,7 +98,7 @@ func TestExtract(t *testing.T) {
 	o = &Options{
 		Root:      "./testdata",
 		Recursive: true,
-		Log:       log,
+		WarnLog:   log,
 		Funcs: []string{
 			"github.com/issue9/localeutil.Phrase",
 			"github.com/issue9/localeutil.Error",
