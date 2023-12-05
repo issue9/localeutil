@@ -99,6 +99,7 @@ func TestExtract(t *testing.T) {
 		Root:      "./testdata",
 		Recursive: true,
 		WarnLog:   log,
+		InfoLog:   log,
 		Funcs: []string{
 			"github.com/issue9/localeutil.Phrase",
 			"github.com/issue9/localeutil.Error",

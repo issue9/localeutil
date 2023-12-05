@@ -1,5 +1,14 @@
 id: zh-CN
 messages:
+    - key: can not covert to message at %s:%d
+      message:
+        msg: 位于 %s:%d 的内容无法作为本地化消息提取
+    - key: find new locale string %s at %s:%d
+      message:
+        msg: 在 %s[1]:%[2]d 找到新的翻译项 %[3]s
+    - key: has empty string at %s:%d
+      message:
+        msg: 在 %s:%d 的空字符串无法作为本地化消息被提取
     - key: has same key %s at %s:%d, will be ignore
       message:
         msg: 在 %[2]s:%[3]d 有相同的翻译项 %[1]s，将会被忽略！
@@ -9,6 +18,3 @@ messages:
     - key: the key %s of %s not found, will be deleted
       message:
         msg: '%s 未找到，将被删除！'
-    - key: the type %s can not covert to message
-      message:
-        msg: 类型 %s 无法转换成本地化信息

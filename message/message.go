@@ -4,6 +4,8 @@
 package message
 
 import (
+	"strconv"
+
 	"github.com/issue9/sliceutil"
 	"golang.org/x/text/feature/plural"
 	"golang.org/x/text/language"
@@ -90,7 +92,7 @@ func (l *Language) mergeTo(log LogFunc, dest *Language) {
 	dest.Messages = sliceutil.Delete(dest.Messages, func(dm Message, _ int) bool {
 		exist := sliceutil.Exists(l.Messages, func(sm Message, _ int) bool { return sm.Key == dm.Key })
 		if !exist {
-			log(localeutil.Phrase("the key %s of %s not found, will be deleted", dest.ID, dm.Key))
+			log(localeutil.Phrase("the key %s of %s not found, will be deleted", dest.ID, strconv.Quote(dm.Key)))
 		}
 		return !exist
 	})

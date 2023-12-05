@@ -11,9 +11,9 @@ import (
 	"go/types"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/issue9/localeutil"
 	"github.com/issue9/sliceutil"
@@ -23,8 +23,7 @@ import (
 )
 
 const mode = packages.NeedName | packages.NeedFiles | packages.NeedCompiledGoFiles |
-	packages.NeedImports | packages.NeedDeps | packages.NeedModule |
-	packages.NeedTypes | packages.NeedSyntax | packages.NeedTypesInfo
+	packages.NeedImports | packages.NeedModule | packages.NeedTypes | packages.NeedSyntax | packages.NeedTypesInfo
 
 type extractor struct {
 	warnLog message.LogFunc
@@ -79,48 +78,53 @@ func (ex *extractor) inspectDirs(ctx context.Context, dirs []string) error {
 		case <-ctx.Done():
 			return ctx.Err()
 		default:
-			path := ex.trimPath(dir)
-			ex.info(localeutil.Phrase("parse dir %s", path))
-			start := time.Now()
-			cfg := &packages.Config{
-				Mode:    mode,
-				Context: ctx,
-				Dir:     dir,
-				Fset:    ex.fset,
-			}
-			pkgs, err := packages.Load(cfg)
-			if err != nil {
-				return err
-			}
-			ex.info(localeutil.Phrase("parse dir %s complete, elapsed %s", path, time.Since(start)))
-
-			for _, pkg := range pkgs {
-				info := pkg.TypesInfo
-				for _, f := range pkg.Syntax {
-					wg.Add(1)
-					go func(f *ast.File) {
-						defer wg.Done()
-						ex.inspectFile(info, f)
-					}(f)
-				}
-			}
+			wg.Add(1)
+			go func(dir string) {
+				defer wg.Done()
+				ex.inspectDir(ctx, dir)
+			}(dir)
 		}
 	}
 
 	return nil
 }
 
-func (ex *extractor) inspectFile(info *types.Info, f *ast.File) {
-	ast.Inspect(f, func(n ast.Node) bool {
-		switch expr := n.(type) {
-		case *ast.TypeSpec, *ast.ImportSpec:
-			return false
-		case *ast.CallExpr:
-			return ex.inspect(expr, info)
-		default:
-			return true
+func (ex *extractor) inspectDir(ctx context.Context, dir string) error {
+	cfg := &packages.Config{
+		Mode:    mode,
+		Context: ctx,
+		Dir:     dir,
+		Fset:    ex.fset,
+	}
+	pkgs, err := packages.Load(cfg)
+	if err != nil {
+		return err
+	}
+
+	wg := &sync.WaitGroup{}
+	defer wg.Wait()
+	for _, pkg := range pkgs {
+		info := pkg.TypesInfo
+		for _, f := range pkg.Syntax {
+			wg.Add(1)
+			go func(f *ast.File) {
+				defer wg.Done()
+
+				ast.Inspect(f, func(n ast.Node) bool {
+					switch expr := n.(type) {
+					case *ast.TypeSpec, *ast.ImportSpec:
+						return false
+					case *ast.CallExpr:
+						return ex.inspect(expr, info)
+					default:
+						return true
+					}
+				})
+			}(f)
 		}
-	})
+	}
+
+	return nil
 }
 
 // 遍历 expr 表达式
@@ -194,6 +198,9 @@ func (ex *extractor) tryAppendMsg(expr *ast.CallExpr, pkgName, structName, name 
 
 func (ex *extractor) appendMsg(expr *ast.CallExpr) {
 	var key string
+	p := ex.fset.Position(expr.Pos())
+	path := ex.trimPath(p.Filename)
+
 	switch v := expr.Args[0].(type) {
 	case *ast.BasicLit: // 直接参数，比如 call("xxx")
 		key = v.Value
@@ -203,15 +210,22 @@ func (ex *extractor) appendMsg(expr *ast.CallExpr) {
 			if d.Names != nil && d.Names[0].Obj.Kind == ast.Con { // 常量，可获得值
 				key = d.Values[0].(*ast.BasicLit).Value
 			} else { // 变量，编译时无法获得
-				ex.warnLog(localeutil.Phrase("the type %s can not covert to message", d.Names[0].Obj.Kind))
+				pos := ex.fset.Position(expr.Pos())
+				file := ex.trimPath(pos.Filename)
+				ex.warnLog(localeutil.Phrase("can not covert to message at %s:%d", file, pos.Line))
+				return
 			}
 		}
+	default:
+		ex.warnLog(localeutil.Phrase("can not covert to message at %s:%d", path, p.Line))
+		return
 	}
 
 	if key != "" {
 		key = key[1 : len(key)-1]
 	}
 	if key == "" {
+		ex.warnLog(localeutil.Phrase("has empty string at %s:%d", path, p.Line))
 		return
 	}
 
@@ -219,11 +233,11 @@ func (ex *extractor) appendMsg(expr *ast.CallExpr) {
 	defer ex.mux.Unlock()
 
 	if sliceutil.Exists(ex.msg, func(m message.Message, _ int) bool { return m.Key == key }) {
-		p := ex.fset.Position(expr.Pos())
-		path := ex.trimPath(p.Filename)
-		ex.warnLog(localeutil.Phrase("has same key %s at %s:%d, will be ignore", key, path, p.Line))
+		ex.warnLog(localeutil.Phrase("has same key %s at %s:%d, will be ignore", strconv.Quote(key), path, p.Line))
 		return
 	}
+
+	ex.info(localeutil.Phrase("find new locale string %s at %s:%d", strconv.Quote(key), path, p.Line))
 	ex.msg = append(ex.msg, message.Message{Key: key, Message: message.Text{Msg: key}})
 }
 
