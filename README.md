@@ -6,10 +6,14 @@ localeutil
 ![Go version](https://img.shields.io/github/go-mod/go-version/issue9/localeutil)
 ======
 
-提供了一些常用的本地化相关功能，依赖于 golang.org/x/text
+提供了一些常用的本地化相关功能，依赖于 <https://pkg.go.dev/golang.org/x/text>
 
 - DetectUserLanguage 检测当前用户的本地化信息
-- LoadMessage 从 yaml、json 等格式中加载本地化的信息内容
+- Width 计算字符的宽度
+- message 本地化消息
+- message/serialize 本地化消息的序列化
+- message/extract 本地化消息的提取
+
 
 安装
 ----
