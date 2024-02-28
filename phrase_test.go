@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2020-2024 caixw
+//
 // SPDX-License-Identifier: MIT
 
 package localeutil
@@ -7,7 +9,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/issue9/assert/v3"
+	"github.com/issue9/assert/v4"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
 )
