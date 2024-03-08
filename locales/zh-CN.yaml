@@ -17,4 +17,4 @@ messages:
         msg: 未找到符合 %s 的解码方法
     - key: the key %s of %s not found, will be deleted
       message:
-        msg: '%[1]s 在 %[2]s 中未找到，将被删除！'
+        msg: '%s 在 %s 中未找到，将被删除！'

@@ -94,7 +94,7 @@ func (l *Language) mergeTo(log LogFunc, dest *Language) {
 	dest.Messages = sliceutil.Delete(dest.Messages, func(dm Message, _ int) bool {
 		exist := sliceutil.Exists(l.Messages, func(sm Message, _ int) bool { return sm.Key == dm.Key })
 		if !exist {
-			log(localeutil.Phrase("the key %s of %s not found, will be deleted", dest.ID, strconv.Quote(dm.Key)))
+			log(localeutil.Phrase("the key %s of %s not found, will be deleted", strconv.Quote(dm.Key), dest.ID))
 		}
 		return !exist
 	})
