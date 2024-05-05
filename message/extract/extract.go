@@ -65,12 +65,6 @@ func Extract(ctx context.Context, o *Options) (*message.Language, error) {
 	return &message.Language{ID: o.Language, Messages: ex.msg}, nil
 }
 
-func (ex *extractor) info(msg localeutil.Stringer) {
-	if ex.infoLog != nil {
-		ex.infoLog(msg)
-	}
-}
-
 func (ex *extractor) inspectDirs(ctx context.Context, dirs []string) error {
 	wg := &sync.WaitGroup{}
 	defer wg.Wait()
@@ -239,7 +233,7 @@ func (ex *extractor) appendMsg(expr *ast.CallExpr) {
 		return
 	}
 
-	ex.info(localeutil.Phrase("find new locale string %s at %s:%d", strconv.Quote(key), path, p.Line))
+	ex.infoLog(localeutil.Phrase("find new locale string %s at %s:%d", strconv.Quote(key), path, p.Line))
 	ex.msg = append(ex.msg, message.Message{Key: key, Message: message.Text{Msg: key}})
 }
 
