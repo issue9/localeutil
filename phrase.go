@@ -30,6 +30,7 @@ type (
 	phraseError phrase
 
 	stringError struct {
+		// 不能是常量，否则无法处理 [errors.Is] 和 [errors.As] 等操作
 		key string
 	}
 
