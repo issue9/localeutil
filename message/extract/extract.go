@@ -6,13 +6,14 @@
 package extract
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"go/ast"
 	"go/token"
 	"go/types"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -60,7 +61,7 @@ func Extract(ctx context.Context, o *Options) (*message.Language, error) {
 		return nil, err
 	}
 
-	sort.SliceStable(ex.msg, func(i, j int) bool { return ex.msg[i].Key < ex.msg[j].Key }) // TODO(go1.21): slices.StableSliceFunc
+	slices.SortStableFunc(ex.msg, func(a, b message.Message) int { return cmp.Compare(a.Key, b.Key) })
 
 	return &message.Language{ID: o.Language, Messages: ex.msg}, nil
 }

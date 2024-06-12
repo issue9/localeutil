@@ -4,7 +4,11 @@
 
 package localeutil
 
-import "golang.org/x/text/width"
+import (
+	"maps"
+
+	"golang.org/x/text/width"
+)
 
 var defaultWidthOptions = WidthOptions{
 	width.EastAsianFullwidth: 2,
@@ -33,14 +37,7 @@ type WidthOptions map[width.Kind]int
 // DefaultWidthOptions 返回默认的配置项的副本
 //
 // 如果要基于默认值作修改，可以采用此方法。
-func DefaultWidthOptions() WidthOptions {
-	// TODO(go1.21): 改为 maps.Copy
-	o := make(WidthOptions, len(defaultWidthOptions))
-	for k, v := range defaultWidthOptions {
-		o[k] = v
-	}
-	return o
-}
+func DefaultWidthOptions() WidthOptions { return maps.Clone(defaultWidthOptions) }
 
 // Width 计算字符串的宽度
 func (wo WidthOptions) Width(s string) (w int) {

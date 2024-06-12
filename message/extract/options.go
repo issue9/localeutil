@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"go/token"
 	"io/fs"
-	"log"
+	"log/slog"
 	"os"
 	"path"
 	"path/filepath"
@@ -84,10 +84,10 @@ type fn struct {
 
 func (o *Options) buildExtractor() (*extractor, error) {
 	if o.WarnLog == nil {
-		o.WarnLog = func(v localeutil.Stringer) { log.Println(v) } // TODO(go1.21): slog
+		o.WarnLog = func(v localeutil.Stringer) { slog.Error(v.LocaleString(nil)) }
 	}
 	if o.InfoLog == nil {
-		o.InfoLog = func(v localeutil.Stringer) { log.Println(v) }
+		o.InfoLog = func(v localeutil.Stringer) { slog.Error(v.LocaleString(nil)) }
 	}
 
 	abs, err := filepath.Abs(o.Root)
