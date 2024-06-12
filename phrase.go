@@ -8,7 +8,9 @@ import (
 	"errors"
 	"fmt"
 
+	"golang.org/x/text/language"
 	"golang.org/x/text/message"
+	"golang.org/x/text/message/catalog"
 )
 
 type (
@@ -108,4 +110,10 @@ func (sp StringPhrase) LocaleString(p *Printer) string {
 		return string(sp)
 	}
 	return p.Sprintf(string(sp))
+}
+
+// NewPrinter 从 cat 查找最符合 tag 的语言作为打印对象返回
+func NewPrinter(cat catalog.Catalog, tag language.Tag) *Printer {
+	tag, _, _ = cat.Matcher().Match(tag)
+	return message.NewPrinter(tag, message.Catalog(cat))
 }

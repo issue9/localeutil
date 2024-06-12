@@ -1,4 +1,4 @@
-id: zh-CN
+id: cmn-Hans
 messages:
     - key: can not covert to message at %s:%d
       message:
