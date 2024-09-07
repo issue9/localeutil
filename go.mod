@@ -5,7 +5,7 @@ go 1.21
 require (
 	github.com/issue9/assert/v4 v4.3.0
 	github.com/issue9/sliceutil v0.16.1
-	golang.org/x/text v0.17.0
+	golang.org/x/text v0.18.0
 	golang.org/x/tools v0.24.0
 )
 
