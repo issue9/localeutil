@@ -6,6 +6,7 @@
 package message
 
 import (
+	"slices"
 	"strconv"
 
 	"github.com/issue9/sliceutil"
@@ -92,7 +93,7 @@ func (l *Language) MergeTo(log LogFunc, dest []*Language) {
 func (l *Language) mergeTo(log LogFunc, dest *Language) {
 	// 删除只存在于 dest 而不存在于 l 的内容
 	dest.Messages = sliceutil.Delete(dest.Messages, func(dm Message, _ int) bool {
-		exist := sliceutil.Exists(l.Messages, func(sm Message, _ int) bool { return sm.Key == dm.Key })
+		exist := slices.IndexFunc(l.Messages, func(sm Message) bool { return sm.Key == dm.Key }) >= 0
 		if !exist {
 			log(localeutil.Phrase("the key %s of %s not found, will be deleted", strconv.Quote(dm.Key), dest.ID))
 		}
@@ -101,7 +102,7 @@ func (l *Language) mergeTo(log LogFunc, dest *Language) {
 
 	// 将 l 独有的项写入 dest
 	for _, sm := range l.Messages {
-		if !sliceutil.Exists(dest.Messages, func(dm Message, _ int) bool { return dm.Key == sm.Key }) {
+		if slices.IndexFunc(dest.Messages, func(dm Message) bool { return dm.Key == sm.Key }) < 0 {
 			dest.Messages = append(dest.Messages, sm)
 		}
 	}

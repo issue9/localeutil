@@ -19,7 +19,6 @@ import (
 	"sync"
 
 	"github.com/issue9/localeutil"
-	"github.com/issue9/sliceutil"
 	"golang.org/x/tools/go/packages"
 
 	"github.com/issue9/localeutil/message"
@@ -182,10 +181,10 @@ func (ex *extractor) inspect(expr *ast.CallExpr, info *types.Info) bool {
 }
 
 func (ex *extractor) tryAppendMsg(expr *ast.CallExpr, pkgName, structName, name string) (continueInspect bool) {
-	exists := sliceutil.Exists(ex.funcs, func(m fn, _ int) bool {
+	index := slices.IndexFunc(ex.funcs, func(m fn) bool {
 		return m.name == name && pkgName == m.pkgName && structName == m.typeName
 	})
-	if !exists {
+	if index < 0 {
 		return true
 	}
 
@@ -229,7 +228,7 @@ func (ex *extractor) appendMsg(expr *ast.CallExpr) {
 	ex.mux.Lock()
 	defer ex.mux.Unlock()
 
-	if sliceutil.Exists(ex.msg, func(m message.Message, _ int) bool { return m.Key == key }) {
+	if slices.IndexFunc(ex.msg, func(m message.Message) bool { return m.Key == key }) >= 0 {
 		ex.warnLog(localeutil.Phrase("has same key %s at %s:%d, will be ignore", strconv.Quote(key), path, p.Line))
 		return
 	}

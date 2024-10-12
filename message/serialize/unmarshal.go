@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 
 	"github.com/issue9/localeutil"
 	"github.com/issue9/sliceutil"
@@ -102,7 +103,7 @@ func joinLanguages(langs []*message.Language) []*message.Language {
 	delIndexes := make([]int, 0, len(langs))
 	for index, lang := range langs {
 		// 该元素已经被标记为删除
-		if sliceutil.Exists(delIndexes, func(v int, _ int) bool { return index == v }) {
+		if slices.IndexFunc(delIndexes, func(v int) bool { return index == v }) >= 0 {
 			continue
 		}
 
@@ -119,6 +120,6 @@ func joinLanguages(langs []*message.Language) []*message.Language {
 	}
 
 	return sliceutil.QuickDelete(langs, func(_ *message.Language, index int) bool {
-		return sliceutil.Exists(delIndexes, func(i int, _ int) bool { return i == index })
+		return slices.IndexFunc(delIndexes, func(i int) bool { return i == index }) >= 0
 	})
 }
