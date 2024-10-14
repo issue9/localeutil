@@ -7,4 +7,4 @@ require golang.org/x/text v0.19.0 // indirect
 
 replace github.com/issue9/localeutil => ../../..
 
-go 1.22.0
+go 1.23.0

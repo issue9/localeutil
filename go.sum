@@ -1,7 +1,7 @@
 github.com/issue9/assert/v4 v4.3.1 h1:dHYODk1yV7j/1baIB6K6UggI4r1Hfuljqic7PaDbwLg=
 github.com/issue9/assert/v4 v4.3.1/go.mod h1:v7qDRXi7AsaZZNh8eAK2rkLJg5/clztqQGA1DRv9Lv4=
-github.com/issue9/sliceutil v0.16.2 h1:pcS5iCC3HQxRRTdzeVakTgrWlYjE+dGjVNKUhc5COE4=
-github.com/issue9/sliceutil v0.16.2/go.mod h1:H12YcbHztIj83H+Tsra62t+so7diRnyIminI6fX/te8=
+github.com/issue9/sliceutil v0.17.0 h1:EtmVlldkAyGxS0O2TnxcAu3pgLJw74I5eh9DHT7TOZs=
+github.com/issue9/sliceutil v0.17.0/go.mod h1:CVpH4f228pICY7JImlztUPe/zf2w0EicEleU9YfFe00=
 golang.org/x/mod v0.21.0 h1:vvrHzRwRfVKSiLrG+d4FMl/Qi4ukBCE6kZlTUkDYRT0=
 golang.org/x/mod v0.21.0/go.mod h1:6SkKJ3Xj0I0BrPOZoBy3bdMptDDU9oJrpohJ3eWZ1fY=
 golang.org/x/sync v0.8.0 h1:3NFvSEYkUoMifnESzZl15y791HH1qU2xm6eCJU5ZPXQ=

@@ -45,7 +45,7 @@ func TestExtract(t *testing.T) {
 		m := l.Messages
 		a.NotNil(m).
 			Length(sliceutil.Dup(m, func(m1, m2 message.Message) bool { return m1.Key == m2.Key }), 0). // 没有重复值
-			Length(m, 13)
+			Length(m, 14)
 
 		for _, mm := range m {
 			t.Log(mm.Key)
@@ -120,7 +120,7 @@ func TestExtract(t *testing.T) {
 			NotNil(l)
 
 		m := l.Messages
-		a.Length(m, 17)
+		a.Length(m, 18)
 
 		for _, mm := range m {
 			t.Log(mm.Key)

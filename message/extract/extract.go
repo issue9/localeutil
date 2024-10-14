@@ -127,55 +127,66 @@ func (ex *extractor) inspectDir(ctx context.Context, dir string) error {
 //
 // 返回值表示是否需要访问子元素
 func (ex *extractor) inspect(expr *ast.CallExpr, info *types.Info) bool {
-	switch f := expr.Fun.(type) {
-	case *ast.SelectorExpr:
-		switch ft := f.X.(type) {
-		case *ast.CallExpr: // path.call(xxx).LocaleString(p)
-			return ex.inspect(ft, info)
-		case *ast.Ident: // path.call(xxx) 或是 path.Type.call(xxx) 或是 Type.call(xxx)
-			obj := info.ObjectOf(ft)
-			if obj == nil {
-				break
-			}
-
-			switch o := obj.(type) {
-			case *types.PkgName:
-				if t := info.ObjectOf(f.Sel); t != nil { // 可能指向其它包的别名
-					if tn, ok := t.(*types.TypeName); ok && tn.IsAlias() {
-						pkgName, structName := getTypeName(tn.Type().String())
-						if !ex.tryAppendMsg(expr, pkgName, "", structName) {
-							return false
-						}
-					}
-				}
-
-				pkgName := o.Imported().Path()
-				return ex.tryAppendMsg(expr, pkgName, "", f.Sel.Name)
-			case *types.Var, *types.Const, *types.Nil:
-				pkgName, structName := getTypeName(o.Type().String())
-				return ex.tryAppendMsg(expr, pkgName, structName, f.Sel.Name)
-			default: // 其它可能类型：Func
-				pos := ex.fset.Position(ft.Pos())
-				panic(fmt.Sprintf("未正确处理 %T 类型的对象,位于 %s", o, pos))
-			}
-		default:
+	t := info.TypeOf(expr.Fun)
+	switch typ := t.(type) {
+	case *types.Signature: // 所有 () 形式的调用
+		if typ.Params().Len() == 0 {
+			return false
+		}
+		if typ.Params().At(0).Type() != types.Typ[types.String] {
 			return true
 		}
-	case *ast.Ident: // call(xxx) 调用当前包中的函数或是类型转换，肯定不会有结构体相关联。
-		if obj := info.ObjectOf(f); obj != nil {
-			if tn, ok := obj.(*types.TypeName); ok && tn.IsAlias() {
-				pkgName, structName := getTypeName(tn.Type().String())
-				if !ex.tryAppendMsg(expr, pkgName, "", structName) {
-					return false
-				}
-			}
 
-			var pkgName string
-			if pkg := obj.Pkg(); pkg != nil {
-				pkgName = pkg.Path()
-			}
-			return ex.tryAppendMsg(expr, pkgName, "", f.Name)
+		var obj types.Object
+		switch ft := expr.Fun.(type) {
+		case *ast.SelectorExpr:
+			obj = info.ObjectOf(ft.Sel)
+		case *ast.Ident:
+			obj = info.ObjectOf(ft)
+		default:
+			panic(fmt.Sprintf("未处理的 expr.Func 类型 %+T", ft))
 		}
+		if obj == nil {
+			return true
+		}
+		f, ok := obj.(*types.Func)
+		if !ok {
+			return true
+		}
+
+		s := f.Signature()   // typ.Recv 永远返回 nil，只有通过 types.Func.Signature 返回的才会有正确的返回值
+		if s.Recv() == nil { // func
+			if !ex.tryAppendMsg(expr, f.Pkg().Path(), "", f.Name()) {
+				return false
+			}
+		} else { // method
+			pkgName, structName := parseTypeName(s.Recv().Type().String())
+			if !ex.tryAppendMsg(expr, pkgName, structName, f.Name()) {
+				return false
+			}
+		}
+	case *types.Alias: // type Alias = localeutil.StringPhrase; Alias('key')
+		rhs := typ.Rhs()
+		alias, ok := rhs.(*types.Alias)
+		for ok {
+			rhs = alias.Rhs()
+			if _, bok := rhs.(*types.Basic); bok {
+				rhs = alias
+				break
+			}
+			alias, ok = rhs.(*types.Alias)
+		}
+
+		pkgName, funcName := parseTypeName(rhs.String())
+		if !ex.tryAppendMsg(expr, pkgName, "", funcName) {
+			return false
+		}
+	case *types.Named: // type X string; X('key')
+		obj := typ.Obj()
+		ex.tryAppendMsg(expr, obj.Pkg().Path(), "", obj.Name())
+		return false
+	case *types.Basic:
+		return false
 	}
 	return true
 }
@@ -237,7 +248,7 @@ func (ex *extractor) appendMsg(expr *ast.CallExpr) {
 	ex.msg = append(ex.msg, message.Message{Key: key, Message: message.Text{Msg: key}})
 }
 
-func getTypeName(t string) (pkg, structure string) {
+func parseTypeName(t string) (pkg, structure string) {
 	if t[0] == '*' {
 		t = t[1:]
 	}
