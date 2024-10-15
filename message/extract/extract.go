@@ -8,7 +8,6 @@ package extract
 import (
 	"cmp"
 	"context"
-	"fmt"
 	"go/ast"
 	"go/token"
 	"go/types"
@@ -144,8 +143,6 @@ func (ex *extractor) inspect(expr *ast.CallExpr, info *types.Info) bool {
 			obj = info.ObjectOf(ft.Sel)
 		case *ast.Ident:
 			obj = info.ObjectOf(ft)
-		default:
-			panic(fmt.Sprintf("未处理的 expr.Func 类型 %+T", ft))
 		}
 		if obj == nil {
 			return true
@@ -184,8 +181,9 @@ func (ex *extractor) inspect(expr *ast.CallExpr, info *types.Info) bool {
 		}
 	case *types.Named: // type X string; X('key')
 		obj := typ.Obj()
-		ex.tryAppendMsg(expr, obj.Pkg().Path(), "", obj.Name())
-		return false
+		if !ex.tryAppendMsg(expr, obj.Pkg().Path(), "", obj.Name()) {
+			return false
+		}
 	case *types.Basic:
 		return false
 	}

@@ -21,7 +21,7 @@ type (
 	// File 单个本地化语言组成的文件
 	File struct {
 		XMLName   struct{}       `xml:"language" json:"-" yaml:"-"`
-		Languages []language.Tag `xml:"languages>language" json:"language" yaml:"language"` // 如果用字符串，还需要处理大小写以及不同值表示同一个 language.Tag 对象的问题
+		Languages []language.Tag `xml:"languages>language" json:"languages" yaml:"languages"` // 如果用字符串，还需要处理大小写以及不同值表示同一个 language.Tag 对象的问题
 		Messages  []Message      `xml:"message" json:"messages" yaml:"messages"`
 	}
 
