@@ -18,8 +18,8 @@ import (
 )
 
 type (
-	// Language 某一语言的本地化内容
-	Language struct {
+	// File 单个本地化语言组成的文件
+	File struct {
 		XMLName  struct{}     `xml:"language" json:"-" yaml:"-"`
 		ID       language.Tag `xml:"id,attr" json:"id" yaml:"id"` // 如果用字符串，还需要处理大小写以及不同值表示同一个 language.Tag 对象的问题
 		Messages []Message    `xml:"message" json:"messages" yaml:"messages"`
@@ -64,7 +64,7 @@ type (
 //
 //	-如果 l2 的 [Message.Key] 存在于 l，则覆盖 l 的项；
 //	-如果 l2 的 [Message.Key] 不存在于 l，则写入 l；
-func (l *Language) Join(l2 *Language) {
+func (l *File) Join(l2 *File) {
 	for index, m2 := range l2.Messages {
 		elem, found := sliceutil.At(l.Messages, func(m1 Message, _ int) bool { return m1.Key == m2.Key })
 		if !found {
@@ -84,16 +84,16 @@ func (l *Language) Join(l2 *Language) {
 //
 // 最终内容是 dest 为准。
 // log 所有删除的记录都将通过此输出；
-func (l *Language) MergeTo(log LogFunc, dest []*Language) {
+func (f *File) MergeTo(log LogFunc, dest []*File) {
 	for _, d := range dest {
-		l.mergeTo(log, d)
+		f.mergeTo(log, d)
 	}
 }
 
-func (l *Language) mergeTo(log LogFunc, dest *Language) {
+func (f *File) mergeTo(log LogFunc, dest *File) {
 	// 删除只存在于 dest 而不存在于 l 的内容
 	dest.Messages = sliceutil.Delete(dest.Messages, func(dm Message, _ int) bool {
-		exist := slices.IndexFunc(l.Messages, func(sm Message) bool { return sm.Key == dm.Key }) >= 0
+		exist := slices.IndexFunc(f.Messages, func(sm Message) bool { return sm.Key == dm.Key }) >= 0
 		if !exist {
 			log(localeutil.Phrase("the key %s of %s not found, will be deleted", strconv.Quote(dm.Key), dest.ID))
 		}
@@ -101,7 +101,7 @@ func (l *Language) mergeTo(log LogFunc, dest *Language) {
 	})
 
 	// 将 l 独有的项写入 dest
-	for _, sm := range l.Messages {
+	for _, sm := range f.Messages {
 		if slices.IndexFunc(dest.Messages, func(dm Message) bool { return dm.Key == sm.Key }) < 0 {
 			dest.Messages = append(dest.Messages, sm)
 		}
@@ -109,8 +109,8 @@ func (l *Language) mergeTo(log LogFunc, dest *Language) {
 }
 
 // Catalog 将本地化信息附加在 [catalog.Catalog] 上
-func (l *Language) Catalog(b *catalog.Builder) (err error) {
-	for _, msg := range l.Messages {
+func (f *File) Catalog(b *catalog.Builder) (err error) {
+	for _, msg := range f.Messages {
 		switch {
 		case msg.Message.Vars != nil:
 			vars := msg.Message.Vars
@@ -120,12 +120,12 @@ func (l *Language) Catalog(b *catalog.Builder) (err error) {
 				msgs = append(msgs, mm)
 			}
 			msgs = append(msgs, catalog.String(msg.Message.Msg))
-			err = b.Set(l.ID, msg.Key, msgs...)
+			err = b.Set(f.ID, msg.Key, msgs...)
 		case msg.Message.Select != nil:
 			s := msg.Message.Select
-			err = b.Set(l.ID, msg.Key, plural.Selectf(s.Arg, s.Format, ex(s.Cases)...))
+			err = b.Set(f.ID, msg.Key, plural.Selectf(s.Arg, s.Format, ex(s.Cases)...))
 		case msg.Message.Msg != "":
-			err = b.SetString(l.ID, msg.Key, msg.Message.Msg)
+			err = b.SetString(f.ID, msg.Key, msg.Message.Msg)
 		}
 
 		if err != nil {

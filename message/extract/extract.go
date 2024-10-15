@@ -41,7 +41,7 @@ type extractor struct {
 // Extract 提取本地化内容
 //
 // o 给定的参数错误，可能会触发 panic，比如 o 为空、o.Funcs 格式错误等。
-func Extract(ctx context.Context, o *Options) (*message.Language, error) {
+func Extract(ctx context.Context, o *Options) (*message.File, error) {
 	if o == nil {
 		panic("参数 o 不能为空")
 	}
@@ -62,7 +62,7 @@ func Extract(ctx context.Context, o *Options) (*message.Language, error) {
 
 	slices.SortStableFunc(ex.msg, func(a, b message.Message) int { return cmp.Compare(a.Key, b.Key) })
 
-	return &message.Language{ID: o.Language, Messages: ex.msg}, nil
+	return &message.File{ID: o.Language, Messages: ex.msg}, nil
 }
 
 func (ex *extractor) inspectDirs(ctx context.Context, dirs []string) error {

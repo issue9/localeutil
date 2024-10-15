@@ -18,11 +18,11 @@ import (
 func TestLanguage_Join(t *testing.T) {
 	a := assert.New(t, false)
 
-	src := &Language{
+	src := &File{
 		ID:       language.SimplifiedChinese,
 		Messages: []Message{{Key: "src"}, {Key: "g", Message: Text{Msg: "src"}}},
 	}
-	l := &Language{
+	l := &File{
 		ID:       language.SimplifiedChinese,
 		Messages: []Message{{Key: "l"}, {Key: "g", Message: Text{Msg: "l"}}},
 	}
@@ -34,28 +34,28 @@ func TestLanguage_MergeTo(t *testing.T) {
 	a := assert.New(t, false)
 	log := func(s localeutil.Stringer) {}
 
-	dest := &Language{
+	dest := &File{
 		ID:       language.SimplifiedChinese,
 		Messages: []Message{{Key: "dest"}},
 	}
-	l := &Language{
+	l := &File{
 		ID:       language.Afrikaans,
 		Messages: []Message{{Key: "l"}},
 	}
-	l.MergeTo(log, []*Language{dest})
+	l.MergeTo(log, []*File{dest})
 	a.Equal(dest.ID, language.SimplifiedChinese).
 		Length(dest.Messages, 1).Equal(dest.Messages[0].Key, "l").
 		Length(l.Messages, 1).Equal(l.Messages[0].Key, "l")
 
-	dest = &Language{
+	dest = &File{
 		ID:       language.SimplifiedChinese,
 		Messages: []Message{{Key: "dest"}, {Key: "g"}},
 	}
-	l = &Language{
+	l = &File{
 		ID:       language.SimplifiedChinese,
 		Messages: []Message{{Key: "l"}, {Key: "g"}},
 	}
-	l.MergeTo(log, []*Language{dest})
+	l.MergeTo(log, []*File{dest})
 	a.Length(dest.Messages, 2).
 		Length(l.Messages, 2).Equal(l.Messages[0].Key, "l").Equal(l.Messages[1].Key, "g")
 }
@@ -64,7 +64,7 @@ func TestLanguage_Catalog(t *testing.T) {
 	a := assert.New(t, false)
 
 	b := catalog.NewBuilder()
-	l := &Language{
+	l := &File{
 		ID: language.SimplifiedChinese,
 		Messages: []Message{
 			{Key: "k1", Message: Text{Msg: "msg1"}},

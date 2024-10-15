@@ -39,5 +39,5 @@ func TestSaveFile(t *testing.T) {
 	l2, err := LoadFS(os.DirFS("./testdata"), "cmn-hant.xml", xml.Unmarshal)
 	a.NotError(err).NotNil(l2)
 
-	a.NotError(SaveFiles([]*message.Language{l1, l2}, "./testdata/", ".out", json.Marshal, os.ModePerm))
+	a.NotError(SaveFiles([]*message.File{l1, l2}, "./testdata/", ".out", json.Marshal, os.ModePerm))
 }

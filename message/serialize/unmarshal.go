@@ -19,23 +19,23 @@ type UnmarshalFunc = func([]byte, any) error
 type Search = func(string) UnmarshalFunc
 
 // Unmarshal 加载内容
-func Unmarshal(data []byte, u UnmarshalFunc) (*message.Language, error) {
-	l := &message.Language{}
+func Unmarshal(data []byte, u UnmarshalFunc) (*message.File, error) {
+	l := &message.File{}
 	if err := u(data, l); err != nil {
 		return nil, err
 	}
 	return l, nil
 }
 
-func LoadFile(path string, u UnmarshalFunc) (*message.Language, error) {
+func LoadFile(path string, u UnmarshalFunc) (*message.File, error) {
 	return unmarshalFS(func() ([]byte, error) { return os.ReadFile(path) }, u)
 }
 
-func LoadFS(fsys fs.FS, name string, u UnmarshalFunc) (*message.Language, error) {
+func LoadFS(fsys fs.FS, name string, u UnmarshalFunc) (*message.File, error) {
 	return unmarshalFS(func() ([]byte, error) { return fs.ReadFile(fsys, name) }, u)
 }
 
-func unmarshalFS(f func() ([]byte, error), u UnmarshalFunc) (*message.Language, error) {
+func unmarshalFS(f func() ([]byte, error), u UnmarshalFunc) (*message.File, error) {
 	data, err := f()
 	if err != nil {
 		return nil, err
@@ -46,13 +46,13 @@ func unmarshalFS(f func() ([]byte, error), u UnmarshalFunc) (*message.Language, 
 // LoadGlob 批量加载文件
 //
 // 相同 Language.ID 的项会合并。
-func LoadGlob(s Search, glob string) ([]*message.Language, error) {
+func LoadGlob(s Search, glob string) ([]*message.File, error) {
 	matches, err := filepath.Glob(glob)
 	if err != nil {
 		return nil, err
 	}
 
-	langs := make([]*message.Language, 0, len(matches))
+	langs := make([]*message.File, 0, len(matches))
 	for _, match := range matches {
 		u := s(match)
 		if u == nil {
@@ -71,8 +71,8 @@ func LoadGlob(s Search, glob string) ([]*message.Language, error) {
 // LoadFSGlob 批量加载文件
 //
 // 相同 Language.ID 的项会合并。
-func LoadFSGlob(s Search, glob string, fsys ...fs.FS) ([]*message.Language, error) {
-	langs := make([]*message.Language, 0, 10)
+func LoadFSGlob(s Search, glob string, fsys ...fs.FS) ([]*message.File, error) {
+	langs := make([]*message.File, 0, 10)
 	for _, f := range fsys {
 		matches, err := fs.Glob(f, glob)
 		if err != nil {
