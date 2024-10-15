@@ -8,11 +8,8 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"slices"
 
 	"github.com/issue9/localeutil"
-	"github.com/issue9/sliceutil"
-
 	"github.com/issue9/localeutil/message"
 )
 
@@ -48,7 +45,7 @@ func unmarshalFS(f func() ([]byte, error), u UnmarshalFunc) (*message.Language, 
 
 // LoadGlob 批量加载文件
 //
-// 相同语言 ID 的项会合并。
+// 相同 Language.ID 的项会合并。
 func LoadGlob(s Search, glob string) ([]*message.Language, error) {
 	matches, err := filepath.Glob(glob)
 	if err != nil {
@@ -68,12 +65,12 @@ func LoadGlob(s Search, glob string) ([]*message.Language, error) {
 		langs = append(langs, l)
 	}
 
-	return joinLanguages(langs), nil
+	return langs, nil
 }
 
 // LoadFSGlob 批量加载文件
 //
-// 相同语言 ID 的项会合并。
+// 相同 Language.ID 的项会合并。
 func LoadFSGlob(s Search, glob string, fsys ...fs.FS) ([]*message.Language, error) {
 	langs := make([]*message.Language, 0, 10)
 	for _, f := range fsys {
@@ -96,30 +93,5 @@ func LoadFSGlob(s Search, glob string, fsys ...fs.FS) ([]*message.Language, erro
 		}
 	}
 
-	return joinLanguages(langs), nil
-}
-
-func joinLanguages(langs []*message.Language) []*message.Language {
-	delIndexes := make([]int, 0, len(langs))
-	for index, lang := range langs {
-		// 该元素已经被标记为删除
-		if slices.IndexFunc(delIndexes, func(v int) bool { return index == v }) >= 0 {
-			continue
-		}
-
-		// 找与 lang.ID 相同的元素索引
-		indexes := sliceutil.Indexes(langs, func(l *message.Language, i int) bool {
-			return l.ID == lang.ID && i != index
-		})
-
-		for _, i := range indexes {
-			lang.Join(langs[i])
-		}
-
-		delIndexes = append(delIndexes, indexes...)
-	}
-
-	return sliceutil.QuickDelete(langs, func(_ *message.Language, index int) bool {
-		return slices.IndexFunc(delIndexes, func(i int) bool { return i == index }) >= 0
-	})
+	return langs, nil
 }

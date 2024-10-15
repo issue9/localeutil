@@ -21,7 +21,7 @@ type (
 	// Language 某一语言的本地化内容
 	Language struct {
 		XMLName  struct{}     `xml:"language" json:"-" yaml:"-"`
-		ID       language.Tag `xml:"id,attr" json:"id" yaml:"id"`
+		ID       language.Tag `xml:"id,attr" json:"id" yaml:"id"` // 如果用字符串，还需要处理大小写以及不同值表示同一个 language.Tag 对象的问题
 		Messages []Message    `xml:"message" json:"messages" yaml:"messages"`
 	}
 

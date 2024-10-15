@@ -21,7 +21,7 @@ import (
 )
 
 type Options struct {
-	// Language 提取内容的语言 ID
+	// Language 提取的内容以此值作为本地化的 ID 保存
 	Language language.Tag
 
 	// 读取的根目录
