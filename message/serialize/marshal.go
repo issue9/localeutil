@@ -8,7 +8,6 @@ import (
 	"cmp"
 	"io/fs"
 	"os"
-	"path/filepath"
 	"slices"
 
 	"github.com/issue9/localeutil/message"
@@ -32,19 +31,4 @@ func SaveFile(l *message.File, path string, f MarshalFunc, mode fs.FileMode) err
 		err = os.WriteFile(path, data, mode)
 	}
 	return err
-}
-
-// SaveFiles 将 langs 按语言 ID 分类保存
-func SaveFiles(langs []*message.File, dir, ext string, f MarshalFunc, mode fs.FileMode) error {
-	if ext[0] != '.' {
-		ext = "." + ext
-	}
-
-	for _, l := range langs {
-		path := filepath.Join(dir, l.ID.String()+ext)
-		if err := SaveFile(l, path, f, mode); err != nil {
-			return err
-		}
-	}
-	return nil
 }

@@ -40,7 +40,7 @@ func TestExtract(t *testing.T) {
 		}
 		l, err := Extract(context.Background(), o)
 		a.NotError(err).NotNil(l).
-			Equal(l.ID.String(), "zh-CN")
+			Equal(l.Languages, []language.Tag{language.MustParse("zh-CN")})
 
 		m := l.Messages
 		a.NotNil(m).

@@ -19,6 +19,7 @@ import (
 	"sync"
 
 	"github.com/issue9/localeutil"
+	"golang.org/x/text/language"
 	"golang.org/x/tools/go/packages"
 
 	"github.com/issue9/localeutil/message"
@@ -62,7 +63,7 @@ func Extract(ctx context.Context, o *Options) (*message.File, error) {
 
 	slices.SortStableFunc(ex.msg, func(a, b message.Message) int { return cmp.Compare(a.Key, b.Key) })
 
-	return &message.File{ID: o.Language, Messages: ex.msg}, nil
+	return &message.File{Languages: []language.Tag{o.Language}, Messages: ex.msg}, nil
 }
 
 func (ex *extractor) inspectDirs(ctx context.Context, dirs []string) error {

@@ -19,12 +19,12 @@ func TestLanguage_Join(t *testing.T) {
 	a := assert.New(t, false)
 
 	src := &File{
-		ID:       language.SimplifiedChinese,
-		Messages: []Message{{Key: "src"}, {Key: "g", Message: Text{Msg: "src"}}},
+		Languages: []language.Tag{language.SimplifiedChinese},
+		Messages:  []Message{{Key: "src"}, {Key: "g", Message: Text{Msg: "src"}}},
 	}
 	l := &File{
-		ID:       language.SimplifiedChinese,
-		Messages: []Message{{Key: "l"}, {Key: "g", Message: Text{Msg: "l"}}},
+		Languages: []language.Tag{language.SimplifiedChinese},
+		Messages:  []Message{{Key: "l"}, {Key: "g", Message: Text{Msg: "l"}}},
 	}
 	l.Join(src)
 	a.Length(l.Messages, 3)
@@ -35,27 +35,27 @@ func TestLanguage_MergeTo(t *testing.T) {
 	log := func(s localeutil.Stringer) {}
 
 	dest := &File{
-		ID:       language.SimplifiedChinese,
-		Messages: []Message{{Key: "dest"}},
+		Languages: []language.Tag{language.SimplifiedChinese},
+		Messages:  []Message{{Key: "dest"}},
 	}
 	l := &File{
-		ID:       language.Afrikaans,
-		Messages: []Message{{Key: "l"}},
+		Languages: []language.Tag{language.Afrikaans},
+		Messages:  []Message{{Key: "l"}},
 	}
-	l.MergeTo(log, []*File{dest})
-	a.Equal(dest.ID, language.SimplifiedChinese).
+	l.MergeTo(log, dest, "dest.yaml")
+	a.Equal(dest.Languages, []language.Tag{language.SimplifiedChinese}).
 		Length(dest.Messages, 1).Equal(dest.Messages[0].Key, "l").
 		Length(l.Messages, 1).Equal(l.Messages[0].Key, "l")
 
 	dest = &File{
-		ID:       language.SimplifiedChinese,
-		Messages: []Message{{Key: "dest"}, {Key: "g"}},
+		Languages: []language.Tag{language.SimplifiedChinese},
+		Messages:  []Message{{Key: "dest"}, {Key: "g"}},
 	}
 	l = &File{
-		ID:       language.SimplifiedChinese,
-		Messages: []Message{{Key: "l"}, {Key: "g"}},
+		Languages: []language.Tag{language.SimplifiedChinese},
+		Messages:  []Message{{Key: "l"}, {Key: "g"}},
 	}
-	l.MergeTo(log, []*File{dest})
+	l.MergeTo(log, dest, "dest.yaml")
 	a.Length(dest.Messages, 2).
 		Length(l.Messages, 2).Equal(l.Messages[0].Key, "l").Equal(l.Messages[1].Key, "g")
 }
@@ -65,7 +65,7 @@ func TestLanguage_Catalog(t *testing.T) {
 
 	b := catalog.NewBuilder()
 	l := &File{
-		ID: language.SimplifiedChinese,
+		Languages: []language.Tag{language.SimplifiedChinese},
 		Messages: []Message{
 			{Key: "k1", Message: Text{Msg: "msg1"}},
 			{Key: "k2 %s", Message: Text{Msg: "msg-%s"}},

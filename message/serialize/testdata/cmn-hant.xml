@@ -1,4 +1,7 @@
-<language id="cmn-hant">
+<language>
+    <languages>
+        <language>cmn-hant</language>
+    </languages>
     <message>
         <key>k1</key>
         <message>

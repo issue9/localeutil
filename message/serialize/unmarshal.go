@@ -44,8 +44,6 @@ func unmarshalFS(f func() ([]byte, error), u UnmarshalFunc) (*message.File, erro
 }
 
 // LoadGlob 批量加载文件
-//
-// 相同 Language.ID 的项会合并。
 func LoadGlob(s Search, glob string) ([]*message.File, error) {
 	matches, err := filepath.Glob(glob)
 	if err != nil {
@@ -69,8 +67,6 @@ func LoadGlob(s Search, glob string) ([]*message.File, error) {
 }
 
 // LoadFSGlob 批量加载文件
-//
-// 相同 Language.ID 的项会合并。
 func LoadFSGlob(s Search, glob string, fsys ...fs.FS) ([]*message.File, error) {
 	langs := make([]*message.File, 0, 10)
 	for _, f := range fsys {

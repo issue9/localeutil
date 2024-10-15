@@ -20,9 +20,9 @@ import (
 type (
 	// File 单个本地化语言组成的文件
 	File struct {
-		XMLName  struct{}     `xml:"language" json:"-" yaml:"-"`
-		ID       language.Tag `xml:"id,attr" json:"id" yaml:"id"` // 如果用字符串，还需要处理大小写以及不同值表示同一个 language.Tag 对象的问题
-		Messages []Message    `xml:"message" json:"messages" yaml:"messages"`
+		XMLName   struct{}       `xml:"language" json:"-" yaml:"-"`
+		Languages []language.Tag `xml:"languages>language" json:"language" yaml:"language"` // 如果用字符串，还需要处理大小写以及不同值表示同一个 language.Tag 对象的问题
+		Messages  []Message      `xml:"message" json:"messages" yaml:"messages"`
 	}
 
 	// Message 单条本地化内容
@@ -75,7 +75,7 @@ func (l *File) Join(l2 *File) {
 	}
 }
 
-// Merge 将 l.Messages 写入 dest 中的每个元素
+// Merge 将 l.Messages 写入 dest
 //
 // 这将会执行以下几个步骤：
 //
@@ -84,18 +84,13 @@ func (l *File) Join(l2 *File) {
 //
 // 最终内容是 dest 为准。
 // log 所有删除的记录都将通过此输出；
-func (f *File) MergeTo(log LogFunc, dest []*File) {
-	for _, d := range dest {
-		f.mergeTo(log, d)
-	}
-}
-
-func (f *File) mergeTo(log LogFunc, dest *File) {
+// destFile 最终输出的文件名，该值仅在错误信息中；
+func (f *File) MergeTo(log LogFunc, dest *File, destFile string) {
 	// 删除只存在于 dest 而不存在于 l 的内容
 	dest.Messages = sliceutil.Delete(dest.Messages, func(dm Message, _ int) bool {
 		exist := slices.IndexFunc(f.Messages, func(sm Message) bool { return sm.Key == dm.Key }) >= 0
 		if !exist {
-			log(localeutil.Phrase("the key %s of %s not found, will be deleted", strconv.Quote(dm.Key), dest.ID))
+			log(localeutil.Phrase("the key %s of %s not found, will be deleted", strconv.Quote(dm.Key), destFile))
 		}
 		return !exist
 	})
@@ -120,16 +115,24 @@ func (f *File) Catalog(b *catalog.Builder) (err error) {
 				msgs = append(msgs, mm)
 			}
 			msgs = append(msgs, catalog.String(msg.Message.Msg))
-			err = b.Set(f.ID, msg.Key, msgs...)
+			for _, id := range f.Languages {
+				if err := b.Set(id, msg.Key, msgs...); err != nil {
+					return err
+				}
+			}
 		case msg.Message.Select != nil:
 			s := msg.Message.Select
-			err = b.Set(f.ID, msg.Key, plural.Selectf(s.Arg, s.Format, ex(s.Cases)...))
+			for _, id := range f.Languages {
+				if err := b.Set(id, msg.Key, plural.Selectf(s.Arg, s.Format, ex(s.Cases)...)); err != nil {
+					return err
+				}
+			}
 		case msg.Message.Msg != "":
-			err = b.SetString(f.ID, msg.Key, msg.Message.Msg)
-		}
-
-		if err != nil {
-			return err
+			for _, id := range f.Languages {
+				if err := b.SetString(id, msg.Key, msg.Message.Msg); err != nil {
+					return err
+				}
+			}
 		}
 	}
 
