@@ -49,6 +49,10 @@ func f1() {
 
 	// 需要计算的值，无法提取
 	fmt.Println(localeutil.Phrase(constValue + "1").LocaleString(nil))
+
+	defer func() {
+		const c5 = ref.String("c5")
+	}()
 }
 
 // 无法获取动态的内容

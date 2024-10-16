@@ -120,7 +120,7 @@ func TestExtract(t *testing.T) {
 			NotNil(l)
 
 		m := l.Messages
-		a.Length(m, 18)
+		a.Length(m, 19)
 
 		for _, mm := range m {
 			t.Log(mm.Key)

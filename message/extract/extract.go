@@ -130,10 +130,7 @@ func (ex *extractor) inspect(expr *ast.CallExpr, info *types.Info) bool {
 	t := info.TypeOf(expr.Fun)
 	switch typ := t.(type) {
 	case *types.Signature: // 所有 () 形式的调用
-		if typ.Params().Len() == 0 {
-			return false
-		}
-		if typ.Params().At(0).Type() != types.Typ[types.String] {
+		if typ.Params().Len() == 0 || typ.Params().At(0).Type() != types.Typ[types.String] { // 可能是匿名函数
 			return true
 		}
 
