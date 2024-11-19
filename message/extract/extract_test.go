@@ -100,7 +100,7 @@ func TestExtract(t *testing.T) {
 		t.Log("\n\n")
 	})
 
-	// 添加了 locale.Printer.Print
+	// 添加了 locale.Printer.Print，以及 struct tag
 	t.Run("localeutilx3,localex2", func(t *testing.T) {
 		o := &Options{
 			Root:      "./testdata",
@@ -114,13 +114,14 @@ func TestExtract(t *testing.T) {
 				"github.com/issue9/localeutil/testdata/locale.String",        // 别名，ref.String 指向此值
 				"github.com/issue9/localeutil/testdata/locale.Printer.Print", // ref.Printer 指向此值
 			},
+			Tag: "comment",
 		}
 		l, err := Extract(context.Background(), o)
 		a.NotError(err).NotNil(l).
 			NotNil(l)
 
 		m := l.Messages
-		a.Length(m, 19)
+		a.Length(m, 23)
 
 		for _, mm := range m {
 			t.Log(mm.Key)

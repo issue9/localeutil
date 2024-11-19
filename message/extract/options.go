@@ -73,6 +73,9 @@ type Options struct {
 	//
 	// 如果为空将不输出任何内容，格式错误将会触发 panic。
 	Funcs []string
+
+	// 指定用于提取 struct tag 中的特定内容作为翻译项
+	Tag string
 }
 
 // [Options.Funcs] 转换后的表示
@@ -101,6 +104,7 @@ func (o *Options) buildExtractor() (*extractor, error) {
 		infoLog: o.InfoLog,
 		fset:    token.NewFileSet(),
 		funcs:   split(o.Funcs...),
+		tag:     o.Tag,
 		root:    abs,
 
 		msg: make([]message.Message, 0, 100),

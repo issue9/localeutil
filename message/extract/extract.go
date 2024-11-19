@@ -12,6 +12,7 @@ import (
 	"go/token"
 	"go/types"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"strconv"
 	"strings"
@@ -33,6 +34,7 @@ type extractor struct {
 	fset    *token.FileSet
 	funcs   []fn
 	root    string
+	tag     string
 
 	mux sync.Mutex
 	msg []message.Message
@@ -108,10 +110,13 @@ func (ex *extractor) inspectDir(ctx context.Context, dir string) error {
 
 				ast.Inspect(f, func(n ast.Node) bool {
 					switch expr := n.(type) {
-					case *ast.TypeSpec, *ast.ImportSpec:
+					case *ast.ImportSpec:
 						return false
 					case *ast.CallExpr:
 						return ex.inspect(expr, info)
+					case *ast.StructType:
+						ex.inspectStructTag(expr)
+						return true
 					default:
 						return true
 					}
@@ -121,6 +126,24 @@ func (ex *extractor) inspectDir(ctx context.Context, dir string) error {
 	}
 
 	return nil
+}
+
+func (ex *extractor) inspectStructTag(st *ast.StructType) {
+	if ex.tag == "" {
+		return
+	}
+
+	for _, f := range st.Fields.List {
+		if f.Tag == nil {
+			continue
+		}
+
+		val := f.Tag.Value
+		if tag := reflect.StructTag(val[1 : len(val)-1]).Get(ex.tag); tag != "" && tag != "-" {
+			p := ex.fset.Position(f.Pos())
+			ex.append(tag, p)
+		}
+	}
 }
 
 // 遍历 expr 表达式
@@ -231,6 +254,12 @@ func (ex *extractor) appendMsg(expr *ast.CallExpr) {
 		ex.warnLog(localeutil.Phrase("has empty string at %s:%d", path, p.Line))
 		return
 	}
+
+	ex.append(key, p)
+}
+
+func (ex *extractor) append(key string, p token.Position) {
+	path := ex.trimPath(p.Filename)
 
 	ex.mux.Lock()
 	defer ex.mux.Unlock()
