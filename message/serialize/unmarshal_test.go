@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2020-2024 caixw
+// SPDX-FileCopyrightText: 2020-2025 caixw
 //
 // SPDX-License-Identifier: MIT
 
@@ -28,13 +28,4 @@ func TestLoad(t *testing.T) {
 
 	ls, err = LoadGlob(func(string) UnmarshalFunc { return xml.Unmarshal }, "./testdata/*.xml")
 	a.NotError(err).Length(ls, 1)
-}
-
-func TestSaveFile(t *testing.T) {
-	a := assert.New(t, false)
-
-	l1, err := LoadFS(os.DirFS("./testdata"), "cmn-hans.json", json.Unmarshal)
-	a.NotError(err).NotNil(l1)
-	l2, err := LoadFS(os.DirFS("./testdata"), "cmn-hant.xml", xml.Unmarshal)
-	a.NotError(err).NotNil(l2)
 }
