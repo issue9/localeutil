@@ -175,12 +175,12 @@ func (ex *extractor) inspect(expr *ast.CallExpr, info *types.Info) bool {
 		s := f.Signature()   // typ.Recv 永远返回 nil，只有通过 types.Func.Signature 返回的才会有正确的返回值
 		if s.Recv() == nil { // func
 			if !ex.tryAppendMsg(expr, f.Pkg().Path(), "", f.Name()) {
-				return false
+				return true
 			}
 		} else { // method
 			pkgName, structName := parseTypeName(s.Recv().Type().String())
 			if !ex.tryAppendMsg(expr, pkgName, structName, f.Name()) {
-				return false
+				return true
 			}
 		}
 	case *types.Alias: // type Alias = localeutil.StringPhrase; Alias('key')
@@ -197,7 +197,7 @@ func (ex *extractor) inspect(expr *ast.CallExpr, info *types.Info) bool {
 
 		pkgName, funcName := parseTypeName(rhs.String())
 		if !ex.tryAppendMsg(expr, pkgName, "", funcName) {
-			return false
+			return true
 		}
 	case *types.Named: // type X string; X('key')
 		obj := typ.Obj()

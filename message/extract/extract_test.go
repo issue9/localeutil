@@ -64,7 +64,7 @@ func TestExtract(t *testing.T) {
 		a.NotError(err).NotNil(l)
 
 		m := l.Messages
-		a.Length(m, 4).
+		a.Length(m, 5).
 			Length(sliceutil.Dup(m, func(m1, m2 message.Message) bool { return m1.Key == m2.Key }), 0) // 没有重复值
 
 		for _, mm := range m {
@@ -91,7 +91,7 @@ func TestExtract(t *testing.T) {
 			NotNil(l)
 
 		m := l.Messages
-		a.Length(m, 9).
+		a.Length(m, 10).
 			Length(sliceutil.Dup(m, func(m1, m2 message.Message) bool { return m1.Key == m2.Key }), 0) // 没有重复值
 
 		for _, mm := range m {
@@ -121,7 +121,7 @@ func TestExtract(t *testing.T) {
 			NotNil(l)
 
 		m := l.Messages
-		a.Length(m, 23)
+		a.Length(m, 24)
 
 		for _, mm := range m {
 			t.Log(mm.Key)

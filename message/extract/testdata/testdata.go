@@ -29,7 +29,7 @@ var (
 	_ = localeutil.Phrase(constValue)
 
 	_ = localeutil.Phrase("phrase 1")
-	_ = localeutil.Phrase("phrase 1") // 同值，应该忽略
+	_ = localeutil.Phrase("phrase 1", localeutil.Phrase("arg")) // 同值，应该忽略，但是参数是一个新的值，需要提取。
 	_ = localeutil.Phrase("phrase %d", "2")
 
 	_ = localeutil.Error("error 1")
