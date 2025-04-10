@@ -1,4 +1,5 @@
 languages:
+    - zh-CN
     - zh-Hans
     - cmn-Hans
 messages:

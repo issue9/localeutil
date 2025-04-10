@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2020-2024 caixw
+// SPDX-FileCopyrightText: 2020-2025 caixw
 //
 // SPDX-License-Identifier: MIT
 
@@ -20,39 +20,39 @@ import (
 type (
 	// File 单个本地化语言组成的文件
 	File struct {
-		XMLName   struct{}       `xml:"language" json:"-" yaml:"-"`
-		Languages []language.Tag `xml:"languages>language" json:"languages" yaml:"languages"` // 如果用字符串，还需要处理大小写以及不同值表示同一个 language.Tag 对象的问题
-		Messages  []Message      `xml:"message" json:"messages" yaml:"messages"`
+		XMLName   struct{}       `xml:"language" json:"-" yaml:"-" toml:"-"`
+		Languages []language.Tag `xml:"languages>language" json:"languages" yaml:"languages" toml:"languages"` // 如果用字符串，还需要处理大小写以及不同值表示同一个 language.Tag 对象的问题
+		Messages  []Message      `xml:"message" json:"messages" yaml:"messages" toml:"messages"`
 	}
 
 	// Message 单条本地化内容
 	Message struct {
-		Key     string `xml:"key" json:"key" yaml:"key"`
-		Message Text   `xml:"message" json:"message" yaml:"message"`
+		Key     string `xml:"key" json:"key" yaml:"key" toml:"key"`
+		Message Text   `xml:"message" json:"message" yaml:"message" toml:"message"`
 	}
 
 	Text struct {
-		Msg    string  `xml:"msg,omitempty" json:"msg,omitempty"  yaml:"msg,omitempty"`
-		Select *Select `xml:"select,omitempty" json:"select,omitempty" yaml:"select,omitempty"`
-		Vars   []*Var  `xml:"var,omitempty" json:"vars,omitempty" yaml:"vars,omitempty"`
+		Msg    string  `xml:"msg,omitempty" json:"msg,omitempty" yaml:"msg,omitempty" toml:"msg,omitempty"`
+		Select *Select `xml:"select,omitempty" json:"select,omitempty" yaml:"select,omitempty" toml:"select,omitempty"`
+		Vars   []*Var  `xml:"var,omitempty" json:"vars,omitempty" yaml:"vars,omitempty" toml:"vars,omitempty"`
 	}
 
 	Select struct {
-		Arg    int     `xml:"arg,attr" json:"arg" yaml:"arg"`
-		Format string  `xml:"format,attr,omitempty" json:"format,omitempty" yaml:"format,omitempty"`
-		Cases  []*Case `xml:"case,omitempty" json:"cases,omitempty" yaml:"cases,omitempty"`
+		Arg    int     `xml:"arg,attr" json:"arg" yaml:"arg" toml:"arg"`
+		Format string  `xml:"format,attr,omitempty" json:"format,omitempty" yaml:"format,omitempty" toml:"format,omitempty"`
+		Cases  []*Case `xml:"case,omitempty" json:"cases,omitempty" yaml:"cases,omitempty" toml:"cases,omitempty"`
 	}
 
 	Var struct {
-		Name   string  `xml:"name,attr" json:"name" yaml:"name"`
-		Arg    int     `xml:"arg,attr" json:"arg" yaml:"arg"`
-		Format string  `xml:"format,attr,omitempty" json:"format,omitempty" yaml:"format,omitempty"`
-		Cases  []*Case `xml:"case,omitempty" json:"cases,omitempty" yaml:"cases,omitempty"`
+		Name   string  `xml:"name,attr" json:"name" yaml:"name" toml:"name"`
+		Arg    int     `xml:"arg,attr" json:"arg" yaml:"arg" toml:"arg"`
+		Format string  `xml:"format,attr,omitempty" json:"format,omitempty" yaml:"format,omitempty" toml:"format,omitempty"`
+		Cases  []*Case `xml:"case,omitempty" json:"cases,omitempty" yaml:"cases,omitempty" toml:"cases,omitempty"`
 	}
 
 	Case struct {
-		Case  string `xml:"case,attr" json:"case" yaml:"case"`
-		Value string `xml:",chardata"`
+		Case  string `xml:"case,attr" json:"case" yaml:"case" toml:"case"`
+		Value string `xml:",chardata" json:"value" yaml:"value" toml:"value"`
 	}
 
 	LogFunc = func(localeutil.Stringer)
