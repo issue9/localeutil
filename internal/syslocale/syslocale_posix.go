@@ -1,9 +1,8 @@
-// SPDX-FileCopyrightText: 2020-2024 caixw
+// SPDX-FileCopyrightText: 2020-2026 caixw
 //
 // SPDX-License-Identifier: MIT
 
 //go:build !windows && !js && !darwin
-// +build !windows,!js,!darwin
 
 package syslocale
 
@@ -52,6 +51,11 @@ func readFromFile(dir string) string {
 
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
+		if err := scanner.Err(); err != nil {
+			log.Println(err)
+			return ""
+		}
+
 		vals := strings.Split(scanner.Text(), "=")
 		if len(vals) != 2 {
 			continue

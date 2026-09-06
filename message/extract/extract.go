@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2020-2024 caixw
+// SPDX-FileCopyrightText: 2020-2026 caixw
 //
 // SPDX-License-Identifier: MIT
 
@@ -174,12 +174,12 @@ func (ex *extractor) inspect(expr *ast.CallExpr, info *types.Info) bool {
 
 		s := f.Signature()   // typ.Recv 永远返回 nil，只有通过 types.Func.Signature 返回的才会有正确的返回值
 		if s.Recv() == nil { // func
-			if !ex.tryAppendMsg(expr, f.Pkg().Path(), "", f.Name()) {
+			if !ex.tryAppendMsg(expr, f.Pkg().Path(), "", f.Name(), info) {
 				return true
 			}
 		} else { // method
 			pkgName, structName := parseTypeName(s.Recv().Type().String())
-			if !ex.tryAppendMsg(expr, pkgName, structName, f.Name()) {
+			if !ex.tryAppendMsg(expr, pkgName, structName, f.Name(), info) {
 				return true
 			}
 		}
@@ -196,12 +196,12 @@ func (ex *extractor) inspect(expr *ast.CallExpr, info *types.Info) bool {
 		}
 
 		pkgName, funcName := parseTypeName(rhs.String())
-		if !ex.tryAppendMsg(expr, pkgName, "", funcName) {
+		if !ex.tryAppendMsg(expr, pkgName, "", funcName, info) {
 			return true
 		}
 	case *types.Named: // type X string; X('key')
 		obj := typ.Obj()
-		if !ex.tryAppendMsg(expr, obj.Pkg().Path(), "", obj.Name()) {
+		if !ex.tryAppendMsg(expr, obj.Pkg().Path(), "", obj.Name(), info) {
 			return false
 		}
 	case *types.Basic:
@@ -210,7 +210,7 @@ func (ex *extractor) inspect(expr *ast.CallExpr, info *types.Info) bool {
 	return true
 }
 
-func (ex *extractor) tryAppendMsg(expr *ast.CallExpr, pkgName, structName, name string) (continueInspect bool) {
+func (ex *extractor) tryAppendMsg(expr *ast.CallExpr, pkgName, structName, name string, info *types.Info) (continueInspect bool) {
 	index := slices.IndexFunc(ex.funcs, func(m fn) bool {
 		return m.name == name && pkgName == m.pkgName && structName == m.typeName
 	})
@@ -218,11 +218,11 @@ func (ex *extractor) tryAppendMsg(expr *ast.CallExpr, pkgName, structName, name 
 		return true
 	}
 
-	ex.appendMsg(expr)
+	ex.appendMsg(expr, info)
 	return false
 }
 
-func (ex *extractor) appendMsg(expr *ast.CallExpr) {
+func (ex *extractor) appendMsg(expr *ast.CallExpr, info *types.Info) {
 	var key string
 	p := ex.fset.Position(expr.Pos())
 	path := ex.trimPath(p.Filename)
@@ -231,11 +231,11 @@ func (ex *extractor) appendMsg(expr *ast.CallExpr) {
 	case *ast.BasicLit: // 直接参数，比如 call("xxx")
 		key = v.Value
 	case *ast.Ident: // 间接参数，比如：const xxx; call(xxx) 或是 var xxx; call(xxx)
-		switch d := v.Obj.Decl.(type) {
-		case *ast.ValueSpec:
-			if d.Names != nil && d.Names[0].Obj.Kind == ast.Con { // 常量，可获得值
-				key = d.Values[0].(*ast.BasicLit).Value
-			} else { // 变量，编译时无法获得
+		if obj, found := info.Uses[v]; found {
+			switch d := obj.(type) {
+			case *types.Const:
+				key = d.Name()
+			case *types.Var:
 				pos := ex.fset.Position(expr.Pos())
 				file := ex.trimPath(pos.Filename)
 				ex.warnLog(localeutil.Phrase("can not covert to message at %s:%d", file, pos.Line))
